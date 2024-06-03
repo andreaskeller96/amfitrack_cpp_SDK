@@ -7,12 +7,16 @@
 // Includes
 //-----------------------------------------------------------------------------
 #include "usb_connection.h"
+#include <string>
 
 //-----------------------------------------------------------------------------
 // Defines
 //-----------------------------------------------------------------------------
 //#define usb_connection_DEBUG_INFO
-#define READ_NONE_BLOCKING
+#define AMFITRACK_READ_NONE_BLOCKING
+
+using namespace AMFITRACK_API_LIB;
+
 
 //-----------------------------------------------------------------------------
 // Functions
@@ -106,14 +110,17 @@ bool usb_connection::usb_connect_device(uint16_t vid, uint16_t pid)
         dev = &devs[0];
 		do {
             bool DeviceAlreadyActive = false;
+            int index_activenode = 0;
 			dev_handle = hid_open_path(dev->path);
-            for (auto& node : _nodes)
+            for (int i = 0; i<_nodes.size(); i++)
             {
+                auto& node = _nodes[i];
                 hid_device_info *dev_handleCurrent = hid_get_device_info(node->getDeviceHandle());
                 int compareResult = wcscmp(dev_handleCurrent->serial_number, dev->serial_number);
                 if (compareResult == 0) 
                 {
                     DeviceAlreadyActive = true;
+                    index_activenode = i;
                 }
             }
 			if (!dev_handle)
@@ -122,11 +129,15 @@ bool usb_connection::usb_connect_device(uint16_t vid, uint16_t pid)
 			}
 			else
 			{
+                std::shared_ptr<AmfitrackNode> node(new AmfitrackNode(dev_handle));
                 if (!DeviceAlreadyActive)
                 {
-                    std::shared_ptr<AmfitrackNode> node(new AmfitrackNode(dev_handle));
                     _nodes.push_back(node);
                     //_DeviceHandles.push_back(dev_handle);
+                }
+                else //replace node if its already active
+                {
+                    _nodes[index_activenode] = node;
                 }
 
 			}
@@ -381,7 +392,7 @@ void usb_connection::usb_init(void)
     this->usb_connect_device(VID, PID_Sensor);
     /* Finds all the nodes (Devices connected over a hub) */
     this->find_nodes();
-#ifdef READ_NONE_BLOCKING
+#ifdef AMFITRACK_READ_NONE_BLOCKING
     /* Sets the USB connections to non-blocking */
     this->set_nonblocking(true);
 #endif // READ_NONE_BLOCKING
@@ -423,7 +434,7 @@ void usb_connection::usb_run(void)
         }
         else
         {
-            std::cout << "TxID not matching connected devices." << std::endl;
+            std::cout << "TxID "<<std::to_string(tx_id)<< " not matching connected devices." << std::endl;
         }
     }
 
@@ -431,7 +442,7 @@ void usb_connection::usb_run(void)
     USB_frame_t rx_frame;
     for (auto node : _nodes)
     {
-#ifdef READ_NONE_BLOCKING
+#ifdef AMFITRACK_READ_NONE_BLOCKING
         if (this->read_blocking(node->getDeviceHandle(), rx_frame.data, USB_REPORT_LENGTH) >= 0)
 #else
         if (this->read_timeout(node->getDeviceHandle(), rx_frame.data, USB_REPORT_LENGTH, 1) >= 0)

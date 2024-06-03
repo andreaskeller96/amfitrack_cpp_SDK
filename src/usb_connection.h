@@ -38,13 +38,18 @@ extern "C"
 
 #include "../lib/amfiprotapi/lib_AmfiProt_API.hpp"
 
+namespace AMFITRACK_API_LIB
+{
+
+
+
 //-----------------------------------------------------------------------------
 // Defines
 //-----------------------------------------------------------------------------
 // #define USB_CONNECTION_DEBUG_INFO
 
-#define MAX_PAYLOAD_SIZE 54
-#define USB_REPORT_LENGTH 64
+constexpr auto MAX_PAYLOAD_SIZE = 54;
+constexpr auto USB_REPORT_LENGTH = 64;
 
 //-----------------------------------------------------------------------------
 // Type declarations
@@ -104,6 +109,7 @@ public:
 
     void usb_init(void);
     void usb_run(void);
+};
 };
 
 
