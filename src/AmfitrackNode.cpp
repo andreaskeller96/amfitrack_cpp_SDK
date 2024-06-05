@@ -11,6 +11,8 @@
 //-----------------------------------------------------------------------------
 // Functions
 //-----------------------------------------------------------------------------
+using namespace AMFITRACK_API_LIB;
+
 
 AmfitrackNode::AmfitrackNode(uint8_t tx_id, uint32_t *uuid) : _tx_id(tx_id), _name_length(AmfiProtMaxPayloadLength - 1)
 {
@@ -85,7 +87,7 @@ AmfitrackNode& AmfitrackNode::operator=(const AmfitrackNode& rhs)
     return *this;
 }
 
-bool operator==(const AmfitrackNode& lhs, const AmfitrackNode& rhs) 
+bool AMFITRACK_API_LIB::operator==(const AmfitrackNode& lhs, const AmfitrackNode& rhs)
 {
     bool ret;
     uint32_t *lhs_uuid, *rhs_uuid;
@@ -96,12 +98,12 @@ bool operator==(const AmfitrackNode& lhs, const AmfitrackNode& rhs)
     
     return ret;
 }
-bool operator!=(const AmfitrackNode& lhs, const AmfitrackNode& rhs)
+bool AMFITRACK_API_LIB::operator!=(const AmfitrackNode& lhs, const AmfitrackNode& rhs)
 {
     return !(operator==(lhs, rhs));
 }
 
-std::ostream& operator<<(std::ostream& os, const AmfitrackNode& node)
+std::ostream& AMFITRACK_API_LIB::operator<<(std::ostream& os, const AmfitrackNode& node)
 {
     uint32_t *uuid = node.getUUID();
     os << "TxID: " << (int)node.getTxID() << "\t UUID: " << uuid[0] << uuid[1] << uuid[2] << "\t name: " << node.getDevName();

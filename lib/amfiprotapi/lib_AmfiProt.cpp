@@ -33,6 +33,7 @@ extern "C"
 #endif
 
 
+using namespace AMFITRACK_API_LIB;
 
 //-----------------------------------------------------------------------------
 // Defines
@@ -173,7 +174,7 @@ bool lib_AmfiProt::lib_AmfiProt_DeserializeFrame(lib_AmfiProt_Frame_t* frame, vo
         }
         else
         {
-            printf("headCRC failed, was: 0x%02X, should have been: 0x%02X\r\n", lib_CRC8_Update(0, &(frame->header), sizeof(frame->header) - 1), frame->header.headCRC);
+            printf("AMFIProt: headCRC failed, was: 0x%02X, should have been: 0x%02X\r\n", lib_CRC8_Update(0, &(frame->header), sizeof(frame->header) - 1), frame->header.headCRC);
         }
     }
 
