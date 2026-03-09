@@ -144,6 +144,7 @@ public:
     void lib_AmfiProt_Amfitrack_handle_SourceCalibration(void* handle, lib_AmfiProt_Frame_t* frame, void* routing_handle) override;
     void lib_AmfiProt_Amfitrack_handle_SourceMeasurement(void* handle, lib_AmfiProt_Frame_t* frame, void* routing_handle) override;
     void lib_AmfiProt_Amfitrack_handle_SensorMeasurement(void* handle, lib_AmfiProt_Frame_t* frame, void* routing_handle) override;
+    void lib_AmfiProt_Amfitrack_handle_SensorStatus(void* handle, lib_AmfiProt_Frame_t* frame, void* routing_handle) override;
     void lib_AmfiProt_Amfitrack_handle_RawBfield(void* handle, lib_AmfiProt_Frame_t* frame, void* routing_handle) override;
     void lib_AmfiProt_Amfitrack_handle_NormalizedBfield(void* handle, lib_AmfiProt_Frame_t* frame, void* routing_handle) override;
     void lib_AmfiProt_Amfitrack_handle_BfieldPhase(void* handle, lib_AmfiProt_Frame_t* frame, void* routing_handle) override;

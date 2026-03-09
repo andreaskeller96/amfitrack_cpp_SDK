@@ -216,6 +216,16 @@ void AMFITRACK::getSensorMeasurements(uint8_t DeviceID, lib_AmfiProt_Amfitrack_S
     memcpy(SensorMeasurement, &SensorMeasurements[DeviceID], sizeof(lib_AmfiProt_Amfitrack_Sensor_Measurement_t));
 }
 
+void AMFITRACK::setDeviceBatterySOC(uint8_t DeviceID, uint8_t SOC)
+{
+    Battery_SOC[DeviceID] = SOC;
+}
+
+uint8_t AMFITRACK::getDeviceBatterySOC(uint8_t DeviceID)
+{
+    return Battery_SOC[DeviceID];
+}
+
 void AmfiProt_API::lib_AmfiProt_Amfitrack_handle_SourceCalibration(void* handle, lib_AmfiProt_Frame_t* frame, void* routing_handle)
 {
     AMFITRACK& AMFITRACK = AMFITRACK::getInstance();
@@ -238,6 +248,14 @@ void AmfiProt_API::lib_AmfiProt_Amfitrack_handle_SensorMeasurement(void* handle,
     AMFITRACK.setDevicePose(frame->header.source, tempPose);
     AMFITRACK.setSensorMeasurements(frame->header.source, SensorMeasurement);
     AMFITRACK.setDeviceActive(frame->header.source);
+}
+
+void AmfiProt_API::lib_AmfiProt_Amfitrack_handle_SensorStatus(void* handle, lib_AmfiProt_Frame_t* frame, void* routing_handle)
+{
+    lib_AmfiProt_Amfitrack_Sensor_Status_t SensorStatus;
+    AMFITRACK& AMFITRACK = AMFITRACK::getInstance();
+    memcpy(&SensorStatus, &frame->payload[0], sizeof(lib_AmfiProt_Amfitrack_Sensor_Status_t));
+    AMFITRACK.setDeviceBatterySOC(frame->header.source, SensorStatus.bat_SOC);
 }
 
 void AmfiProt_API::lib_AmfiProt_Amfitrack_handle_RawBfield(void* handle, lib_AmfiProt_Frame_t* frame, void* routing_handle)

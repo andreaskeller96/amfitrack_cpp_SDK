@@ -79,6 +79,9 @@ public:
 
 	void getSensorMeasurements(uint8_t DeviceID,lib_AmfiProt_Amfitrack_Sensor_Measurement_t* SensorMeasurement);
 
+    void setDeviceBatterySOC(uint8_t DeviceID, uint8_t SOC);
+    uint8_t getDeviceBatterySOC(uint8_t DeviceID);
+
 #if defined(_WIN32) || defined(__linux__) || defined(__APPLE__)
 	void setSensorTimestamp(uint8_t DeviceID, std::chrono::steady_clock::time_point time_stamp);
 
@@ -94,6 +97,7 @@ private:
 
 	lib_AmfiProt_Amfitrack_Pose_t Position[MAX_NUMBER_OF_DEVICES];
 	lib_AmfiProt_Amfitrack_Sensor_Measurement_t SensorMeasurements[MAX_NUMBER_OF_DEVICES];
+    uint8_t Battery_SOC[MAX_NUMBER_OF_DEVICES];
 	
 	static void background_amfitrack_task(AMFITRACK*);
 	void checkDeviceDisconnected(uint8_t DeviceID);
