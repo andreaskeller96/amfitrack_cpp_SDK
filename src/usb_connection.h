@@ -2,9 +2,7 @@
 //                              AMFITECH APS
 //                          ALL RIGHTS RESERVED
 //-----------------------------------------------------------------------------
-
-#ifndef USB_CONNECTION_H_
-#define USB_CONNECTION_H_
+#pragma once
 
 #include "project_conf.h"
 #ifdef USE_USB
@@ -21,20 +19,20 @@
 #include <string.h>
 #include <vector>
 #include <memory>
-#include "lib/hidapi/hidapi/hidapi.h"
+#include "hidapi.h"
 #include "AmfitrackNode.h"
 
 #ifdef __cplusplus
 extern "C"
 {
 #endif
-#include "../lib/lib_queue/lib_Queue.h"
-#include "../lib/lib_crc/lib_CRC.h"
+#include "lib_Queue.h"
+#include "lib_CRC.h"
 #ifdef __cplusplus
 }
 #endif // __cplusplus
 
-#include "../lib/amfiprotapi/lib_AmfiProt_API.hpp"
+#include "lib_AmfiProt_API.hpp"
 
 //-----------------------------------------------------------------------------
 // Defines
@@ -109,4 +107,4 @@ public:
 };
 
 #endif
-#endif // USB_CONNECTION_H_
+

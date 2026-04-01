@@ -26,6 +26,9 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${OUTPUT_PATH})
 # Source files
 set(SOURCES
     Amfitrack.cpp
+
+    src/HID_Monitor.cpp
+
     src/AmfitrackNode.cpp
     src/usb_connection.cpp
     lib/amfiprotapi/lib_AmfiProt.cpp
@@ -39,6 +42,9 @@ set(SOURCES
 # Header files
 set(HEADERS
     Amfitrack.hpp
+
+    src/HID_Monitor.h
+
     src/AmfitrackNode.h
     src/usb_connection.h
     src/project_conf.h
@@ -64,7 +70,18 @@ include_directories(${HIDAPI_PATH}/hidapi)
 target_link_libraries(${APP_NAME} PRIVATE hidapi::hidapi)
 
 # Ensure HIDAPI is included in build
-target_include_directories(${APP_NAME} PRIVATE ${HIDAPI_PATH}/hidapi)
+target_include_directories(${APP_NAME} SYSTEM PUBLIC 
+    .
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+
+    ${CMAKE_CURRENT_SOURCE_DIR}/lib/amfiprotapi
+    ${CMAKE_CURRENT_SOURCE_DIR}/lib/lib_crc
+    ${CMAKE_CURRENT_SOURCE_DIR}/lib/lib_generic_parameter
+    ${CMAKE_CURRENT_SOURCE_DIR}/lib/lib_macro
+    ${CMAKE_CURRENT_SOURCE_DIR}/lib/lib_queue
+
+    ${HIDAPI_PATH}/hidapi
+)
 
 if (CMAKE_VERSION VERSION_GREATER 3.12)
   set_property(TARGET ${APP_NAME} PROPERTY CXX_STANDARD 20)

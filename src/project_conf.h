@@ -1,9 +1,7 @@
 //                              AMFITECH APS
 //                          ALL RIGHTS RESERVED
 //-----------------------------------------------------------------------------
-
-#ifndef PROJECT_CONF_H_
-#define PROJECT_CONF_H_
+#pragma once
 
 /* Depending on what version of the firmware is being used change this. 
  * Version is written as single number 300 which is the same as 3.0.0.x the last x is not being used for this firmware version.
@@ -20,5 +18,3 @@
 
 /* Use if a thread is needed to handle USB and process data */
 #define USE_THREAD_BASED
-
-#endif /* PROJECT_CONF_H_ */

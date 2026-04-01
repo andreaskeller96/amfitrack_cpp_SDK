@@ -11,9 +11,7 @@
 // TODO Write a description here
 //
 //-----------------------------------------------------------------------------
-
-#ifndef AMFITRACK_DEVICES_HPP_
-#define AMFITRACK_DEVICES_HPP_
+#pragma once
 
 //-----------------------------------------------------------------------------
 // Includes
@@ -22,8 +20,8 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include "src/project_conf.h"
-#include "lib/amfiprotapi/lib_AmfiProt_API.hpp"
+#include "project_conf.h"
+#include "lib_AmfiProt_API.hpp"
 #ifdef USE_THREAD_BASED
 #include <mutex>
 #endif // USE_THREAD_BASED
@@ -140,4 +138,3 @@ private:
 #endif
 };
 
-#endif // AMFITRACK_DEVICES_HPP_

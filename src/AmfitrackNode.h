@@ -2,9 +2,7 @@
 //                              AMFITECH APS
 //                          ALL RIGHTS RESERVED
 //-----------------------------------------------------------------------------
-
-#ifndef AMFITRACKNODES_H_
-#define AMFITRACKNODES_H_
+#pragma once
 
 #include "project_conf.h"
 #ifdef USE_ACTIVE_DEVICE_HANDLING
@@ -19,8 +17,8 @@
 #include <vector>
 #include <memory>
 
-#include "lib/hidapi/hidapi/hidapi.h"
-#include "../lib/amfiprotapi/lib_AmfiProt.hpp"
+#include "hidapi.h"
+#include "lib_AmfiProt.hpp"
 
 class AmfitrackNode
 {
@@ -79,4 +77,4 @@ public:
     bool isRF() const;
 };
 #endif
-#endif // AMFITRACKNODES_H_H
+

@@ -1,7 +1,10 @@
-#include "lib/amfiprotapi/lib_AmfiProt_API.hpp"
+#include "project_conf.h"
+#include "lib_AmfiProt_API.hpp"
 #include "Amfitrack.hpp"
+
 #ifdef USE_USB
-#include "src/usb_connection.h"
+#include "usb_connection.h"
+#include "HID_Monitor.h"
 #endif
 #ifdef USE_THREAD_BASED
 #include <iostream>
@@ -41,6 +44,7 @@ void AMFITRACK::background_amfitrack_task(AMFITRACK *inst)
     /* Creates instance of USB */
 #ifdef USE_USB
     usb_connection &usb = usb_connection::getInstance();
+    HIDMonitor &hid = HIDMonitor::getInstance();
 #endif
     AmfiProt_API &amfiprot_api = AmfiProt_API::getInstance();
     AMFITRACK &AMFITRACK = AMFITRACK::getInstance();
@@ -53,6 +57,7 @@ void AMFITRACK::background_amfitrack_task(AMFITRACK *inst)
     {
 #ifdef USE_USB
         usb.usb_run();
+        hid.run();
 #endif
 
         amfiprot_api.amfiprot_run();
@@ -120,10 +125,10 @@ void AMFITRACK::initialize_amfitrack()
 #ifdef USE_USB
     /* Initialize USB conenction */
     usb_connection &usb = usb_connection::getInstance();
-#endif
+    HIDMonitor &hid = HIDMonitor::getInstance();
 
-#ifdef USE_USB
     usb.usb_init();
+    hid.init();
 #endif
 }
 
