@@ -7,8 +7,9 @@
 #include <iostream>
 #include <thread>
 #endif
-
 // #define AMFITRACK_DEBUG_INFO
+
+using namespace AMFITRACK_API;
 
 static bool stop_running = false;
 

@@ -27,6 +27,9 @@
 #ifdef USE_THREAD_BASED
 #include <mutex>
 #endif // USE_THREAD_BASED
+#pragma pack(8)
+namespace AMFITRACK_API
+{
 
 //-----------------------------------------------------------------------------
 // Defines
@@ -139,5 +142,5 @@ private:
     std::chrono::steady_clock::time_point SensorTimestamps[MAX_NUMBER_OF_DEVICES];
 #endif
 };
-
+}
 #endif // AMFITRACK_DEVICES_HPP_
