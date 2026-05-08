@@ -734,7 +734,23 @@ void lib_AmfiProt::lib_AmfiProt_ProcessFrame(void *handle, lib_AmfiProt_Frame_t 
 #include <chrono>
 void lib_AmfiProt::lib_AmfiProt_ProcessFrame(void *handle, lib_AmfiProt_Frame_t *frame, std::chrono::steady_clock::time_point time_stamp, void *routing_handle)
 {
-    // ONLY partiacially implemented
+    // Only AlternativeProcessing has a timestamped handler; all the framework
+    // payload types (Ack, Common/RespondDeviceID, Success/Failure/etc.) go
+    // through the non-timestamped dispatcher so they don't get silently dropped
+    // on the timestamped read path.
+    const uint8_t controlBits = (frame->header.packetType & lib_AmfiProt_packetType_Mask);
+    const bool isFrameworkPayload =
+        controlBits == lib_AmfiProt_packetType_Ack ||
+        frame->header.payloadType == libAmfiProt_PayloadType_Common ||
+        frame->header.payloadType == libAmfiProt_PayloadType_Success ||
+        frame->header.payloadType == libAmfiProt_PayloadType_NotImplemented ||
+        frame->header.payloadType == libAmfiProt_PayloadType_Failure ||
+        frame->header.payloadType == libAmfiProt_PayloadType_InvalidRequest;
+    if (isFrameworkPayload)
+    {
+        this->lib_AmfiProt_ProcessFrame(handle, frame, routing_handle);
+        return;
+    }
     this->libAmfiProt_handle_AlternativeProcessing(handle, frame, time_stamp, routing_handle);
 }
 #endif

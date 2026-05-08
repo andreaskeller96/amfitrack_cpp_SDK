@@ -8,12 +8,16 @@
 //-----------------------------------------------------------------------------
 #include "usb_connection.h"
 
+#include <map>
+#include <tuple>
+
 #ifdef USE_USB
 //-----------------------------------------------------------------------------
 // Defines
 //-----------------------------------------------------------------------------
 // #define usb_connection_DEBUG_INFO
 #define READ_NONE_BLOCKING
+// #define AMFITRACK_DEBUG_READ
 
 //-----------------------------------------------------------------------------
 // Functions
@@ -202,6 +206,38 @@ int usb_connection::read_blocking(hid_device *dev_handle, void *pData, uint8_t l
     int actual_length = 0;
     r = libusb_bulk_transfer(_DeviceHandle, LIBUSB_ENDPOINT_IN, data, USB_REPORT_LENGTH, &actual_length, 0);
 #endif
+
+#ifdef AMFITRACK_DEBUG_READ
+    {
+        static std::map<hid_device *, std::tuple<int, int, int, time_t>> stats;
+        auto &s = stats[dev_handle];
+        auto &calls = std::get<0>(s);
+        auto &got_data = std::get<1>(s);
+        auto &errors = std::get<2>(s);
+        auto &last_print = std::get<3>(s);
+        ++calls;
+        if (r > 0) ++got_data;
+        else if (r < 0) ++errors;
+        time_t now = time(0);
+        if (last_print == 0) last_print = now;
+        if (now - last_print >= 1)
+        {
+            std::cerr << "[read_blocking dev=" << dev_handle
+                      << "] calls=" << calls
+                      << " data=" << got_data
+                      << " errors=" << errors;
+            if (errors > 0)
+            {
+                const wchar_t *err = hid_error(dev_handle);
+                std::wcerr << L" last_err=\"" << (err ? err : L"(null)") << L"\"";
+            }
+            std::cerr << std::endl;
+            calls = got_data = errors = 0;
+            last_print = now;
+        }
+    }
+#endif
+
     memcpy(pData, &(data[2]), USB_REPORT_LENGTH - 2);
     return r - 2;
 }
