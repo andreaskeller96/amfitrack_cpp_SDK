@@ -68,7 +68,7 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
-  auto& amfi_track = AMFITRACK::getInstance();
+  auto& amfi_track = AMFITRACK_API::AMFITRACK::getInstance();
 
   amfi_track.initialize_amfitrack();
   while (!g_quit) {

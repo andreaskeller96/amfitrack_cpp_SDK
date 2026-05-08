@@ -121,32 +121,29 @@ bool usb_connection::usb_connect_device(uint16_t vid, uint16_t pid)
         do
         {
             bool DeviceAlreadyActive = false;
-            hid_device *dev_handle = hid_open_path(dev->path);
             for (const auto &node : _nodes)
             {
                 const hid_device_info *dev_handleCurrent = hid_get_device_info(node->getDeviceHandle());
-                const int compareResult = wcscmp(dev_handleCurrent->serial_number, dev->serial_number);
-                if (compareResult == 0)
+                if (dev_handleCurrent && wcscmp(dev_handleCurrent->serial_number, dev->serial_number) == 0)
                 {
                     DeviceAlreadyActive = true;
+                    break;
                 }
             }
+            if (DeviceAlreadyActive)
+            {
+                dev = dev->next;
+                continue;
+            }
+            hid_device *dev_handle = hid_open_path(dev->path);
             if (!dev_handle)
             {
                 std::cout << "Unable to open device" << std::endl;
             }
             else
             {
-                if (!DeviceAlreadyActive)
-                {
-                    std::shared_ptr<AmfitrackNode> node(new AmfitrackNode(dev_handle));
-                    _nodes.push_back(node);
-                }
-                else
-                {
-                    // If we're not going to use this object, we have to close it, or we leak memory!
-                    hid_close(dev_handle);
-                }
+                std::shared_ptr<AmfitrackNode> node(new AmfitrackNode(dev_handle));
+                _nodes.push_back(node);
             }
             dev = dev->next;
         } while (dev);
