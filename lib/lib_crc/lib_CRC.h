@@ -36,10 +36,11 @@
 // Functions
 //-----------------------------------------------------------------------------
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
-uint8_t lib_CRC8_Update(uint8_t crc, void const *data, size_t data_len);
+	uint8_t lib_CRC8_Update(uint8_t crc, void const *data, size_t data_len);
 
 #ifdef __cplusplus
 }
@@ -48,6 +49,5 @@ uint8_t lib_CRC8_Update(uint8_t crc, void const *data, size_t data_len);
 //-----------------------------------------------------------------------------
 // Variables and constants
 //-----------------------------------------------------------------------------
-
 
 #endif

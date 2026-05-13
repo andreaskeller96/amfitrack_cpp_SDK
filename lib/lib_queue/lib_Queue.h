@@ -64,9 +64,9 @@ size_t libQueue_MaxSize(libQueue_Pointer_t *pointer);
 //-----------------------------------------------------------------------------
 struct libQueue_Pointer
 {
-    size_t head;
-    size_t tail;
-    size_t length;
+	size_t head;
+	size_t tail;
+	size_t length;
 };
 
 #endif

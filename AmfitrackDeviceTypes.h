@@ -13,85 +13,84 @@
 //-----------------------------------------------------------------------------
 // General struct types
 //-----------------------------------------------------------------------------
-typedef struct 
+typedef struct
 {
-    uint8_t Major;
-    uint8_t Minor;
-    uint8_t Patch;
-    uint8_t Build;
+	uint8_t Major;
+	uint8_t Minor;
+	uint8_t Patch;
+	uint8_t Build;
 } FW_t;
 
-typedef struct 
+typedef struct
 {
-    uint8_t Major;
-    uint8_t Minor;
-    uint8_t Patch;
-    uint8_t Build;
+	uint8_t Major;
+	uint8_t Minor;
+	uint8_t Patch;
+	uint8_t Build;
 } RF_t;
 
-typedef struct 
+typedef struct
 {
-    uint8_t Generation;
-    uint8_t Version;
-    uint8_t SubVersion;
-    uint8_t Frequency;
+	uint8_t Generation;
+	uint8_t Version;
+	uint8_t SubVersion;
+	uint8_t Frequency;
 } HW_t;
 
 //-----------------------------------------------------------------------------
 // Sensor struct types
 //-----------------------------------------------------------------------------
-typedef struct 
+typedef struct
 {
-    float Position_X;
-    float Position_Y;
-    float Position_Z;
-    float Orientation_X;
-    float Orientation_Y;
-    float Orientation_Z;
-    float Orientation_W;
+	float Position_X;
+	float Position_Y;
+	float Position_Z;
+	float Orientation_X;
+	float Orientation_Y;
+	float Orientation_Z;
+	float Orientation_W;
 } Pose_t;
 
-typedef struct 
+typedef struct
 {
-    float Acceleration_X;
-    float Acceleration_Y;
-    float Acceleration_Z;
-    float Rotation_X;
-    float Rotation_Y;
-    float Rotation_Z;
+	float Acceleration_X;
+	float Acceleration_Y;
+	float Acceleration_Z;
+	float Rotation_X;
+	float Rotation_Y;
+	float Rotation_Z;
 } IMU_t;
-
 
 //-----------------------------------------------------------------------------
 // Source struct types
 //-----------------------------------------------------------------------------
-typedef struct 
+typedef struct
 {
-    float Current_X;
-    float Current_Y;
-    float Current_Z;
+	float Current_X;
+	float Current_Y;
+	float Current_Z;
 } Current_t;
 
-typedef struct 
+typedef struct
 {
-    float Voltage_X;
-    float Voltage_Y;
-    float Voltage_Z;
-    float Voltage_Boost;
+	float Voltage_X;
+	float Voltage_Y;
+	float Voltage_Z;
+	float Voltage_Boost;
 } Voltage_t;
 
-typedef struct 
+typedef struct
 {
-    float Frequency_X;
-    float Frequency_Y;
-    float Frequency_Z;
+	float Frequency_X;
+	float Frequency_Y;
+	float Frequency_Z;
 } Frequency_t;
 
-typedef struct 
+typedef struct
 {
-    float Calibration_X;
-    float Calibration_Y;
-    float Calibration_Z;
+	float Calibration_X;
+	float Calibration_Y;
+	float Calibration_Z;
 } Calibration_t;
 
 #endif
