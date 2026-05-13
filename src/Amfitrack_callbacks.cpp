@@ -11,6 +11,8 @@
 //-----------------------------------------------------------------------------
 #include "../lib/amfiprotapi/lib_AmfiProt_API.hpp"
 #include "../Amfitrack.hpp"
+#include "../Amfitrack_New.h"
+#include "../AmfitrackDeviceTypes.h"
 //-----------------------------------------------------------------------------
 // Section: Define
 //-----------------------------------------------------------------------------
@@ -35,6 +37,23 @@ void AmfiProt_API::lib_AmfiProt_Amfitrack_handle_SourceCalibration(void *handle,
     (void)routing_handle;
     AMFITRACK &AMFITRACK = AMFITRACK::getInstance();
     AMFITRACK.setDeviceActive(frame->header.source);
+    lib_AmfiProt_Amfitrack_Source_Calibration_t sourceCalibration;
+    memcpy(&sourceCalibration, &frame->payload[0], sizeof(lib_AmfiProt_Amfitrack_Source_Calibration_t));
+
+    uint8_t deviceID = frame->header.source;
+    Frequency_t freq;
+    Calibration_t cal;
+    freq.Frequency_X = sourceCalibration.frequency_x_in_Hz;
+    freq.Frequency_Y = sourceCalibration.frequency_y_in_Hz;
+    freq.Frequency_Z = sourceCalibration.frequency_z_in_Hz;
+
+    cal.Calibration_X = sourceCalibration.calibration_source_coil_x;
+    cal.Calibration_Y = sourceCalibration.calibration_source_coil_y;
+    cal.Calibration_Z = sourceCalibration.calibration_source_coil_z;
+
+    AMFITRACK_NEW::getInstance().set(deviceID, freq);
+    AMFITRACK_NEW::getInstance().set(deviceID, cal);
+
 }
 
 void AmfiProt_API::lib_AmfiProt_Amfitrack_handle_SourceMeasurement(void *handle, lib_AmfiProt_Frame_t *frame, void *routing_handle)
@@ -43,6 +62,24 @@ void AmfiProt_API::lib_AmfiProt_Amfitrack_handle_SourceMeasurement(void *handle,
     (void)routing_handle;
     AMFITRACK &AMFITRACK = AMFITRACK::getInstance();
     AMFITRACK.setDeviceActive(frame->header.source);
+
+    lib_AmfiProt_Amfitrack_Source_Measurement_t sourceMeasurement;
+    memcpy(&sourceMeasurement, &frame->payload[0], sizeof(lib_AmfiProt_Amfitrack_Source_Measurement_t));
+
+    uint8_t deviceID = frame->header.source;
+    Current_t cur;
+    Voltage_t vol;
+    cur.Current_X = sourceMeasurement.current_coil_x_in_mA * 1000;
+    cur.Current_Y = sourceMeasurement.current_coil_y_in_mA * 1000;
+    cur.Current_Z = sourceMeasurement.current_coil_z_in_mA * 1000;
+
+    vol.Voltage_X = sourceMeasurement.voltage_coil_x_in_V;
+    vol.Voltage_Y = sourceMeasurement.voltage_coil_y_in_V;
+    vol.Voltage_Z = sourceMeasurement.voltage_coil_z_in_V;
+    vol.Voltage_Boost = sourceMeasurement.voltage_boost_in_V;
+
+    AMFITRACK_NEW::getInstance().set(deviceID, cur);
+    AMFITRACK_NEW::getInstance().set(deviceID, vol);
 }
 
 void AmfiProt_API::lib_AmfiProt_Amfitrack_handle_SensorMeasurement(void *handle, lib_AmfiProt_Frame_t *frame, void *routing_handle)
@@ -60,6 +97,17 @@ void AmfiProt_API::lib_AmfiProt_Amfitrack_handle_SensorMeasurement(void *handle,
     AMFITRACK.setDeviceIMU(frame->header.source, tempIMU);
     AMFITRACK.setSensorMeasurements(frame->header.source, SensorMeasurement);
     AMFITRACK.setDeviceActive(frame->header.source);
+
+    Pose_t pose = {tempPose.position_x_in_m, tempPose.position_y_in_m, tempPose.position_z_in_m, tempPose.orientation_x, tempPose.orientation_y, tempPose.orientation_z, tempPose.orientation_w};
+    AMFITRACK_NEW::getInstance().set(frame->header.source, pose);
+    IMU_t imu;
+    imu.Acceleration_X = tempIMU.acceleration_x_in_mg * 1000;
+    imu.Acceleration_Y = tempIMU.acceleration_y_in_mg * 1000;
+    imu.Acceleration_Z = tempIMU.acceleration_z_in_mg * 1000;
+    imu.Rotation_X = tempIMU.rotation_x_in_rad_per_sec;
+    imu.Rotation_Y = tempIMU.rotation_y_in_rad_per_sec;
+    imu.Rotation_Z = tempIMU.rotation_z_in_rad_per_sec;
+    AMFITRACK_NEW::getInstance().set(frame->header.source, imu);
 }
 
 void AmfiProt_API::lib_AmfiProt_Amfitrack_handle_RawBfield(void *handle, lib_AmfiProt_Frame_t *frame, void *routing_handle)

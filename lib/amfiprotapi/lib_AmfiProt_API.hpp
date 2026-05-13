@@ -66,15 +66,15 @@ public:
     }
 
     bool isTransmitting;
-    lib_AmfiProt_Frame_t outgoingBulkData[10];
+    lib_AmfiProt_Frame_t outgoingBulkData[50];
     libQueue_Pointer_t outgoingBulkPointer;
 #if defined(_WIN32) || defined(__linux__) || defined(__APPLE__)
-    std::chrono::steady_clock::time_point incomingBulkDat_timestamps[10];
+    std::chrono::steady_clock::time_point incomingBulkDat_timestamps[50];
     bool deserialize_frame(void const *pData, uint8_t length, std::chrono::steady_clock::time_point time_stamp);
     void libAmfiProt_handle_AlternativeProcessing(void *handle, lib_AmfiProt_Frame_t *frame, std::chrono::steady_clock::time_point time_stamp, void *routing_handle) override;
     void lib_AmfiProt_Amfitrack_handle_SensorMeasurement(void *handle, lib_AmfiProt_Frame_t *frame, std::chrono::steady_clock::time_point time_stamp, void *routing_handle) override;
 #endif
-    lib_AmfiProt_Frame_t incomingBulkData[10];
+    lib_AmfiProt_Frame_t incomingBulkData[50];
     libQueue_Pointer_t incomingBulkPointer;
 
     /* Must always run! */

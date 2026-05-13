@@ -24,6 +24,7 @@
 #include <stdbool.h>
 #include "project_conf.h"
 #include "lib_AmfiProt_API.hpp"
+#include "../AmfitrackDeviceTypes.h"
 #ifdef USE_USB
 #include "hidapi.h"
 #endif
@@ -46,9 +47,9 @@ public:
     uint8_t deviceId;
     char name[MAX_NAME_LENGTH];
     uint32_t uuid[3];
-    uint8_t FW_Version[4];
-    uint8_t RF_Version[4];
-    uint8_t HW_Version[4];
+    FW_t FW_Version;
+    RF_t RF_Version;
+    HW_t HW_Version;
 
     bool active;
     
@@ -56,8 +57,8 @@ public:
 
     hid_device *_dev_handle;
 
-    lib_AmfiProt_Amfitrack_Pose_t pose;
-    lib_AmfiProt_Amfitrack_IMU_t imu;
+    Pose_t pose;
+    IMU_t imu;
 
 #if defined(_WIN32) || defined(__linux__) || defined(__APPLE__)
     std::chrono::steady_clock::time_point sensorTimestamp;
@@ -78,18 +79,18 @@ public:
     uint8_t deviceId;
     char name[MAX_NAME_LENGTH];
     uint32_t uuid[3];
-    uint8_t FW_Version[4];
-    uint8_t RF_Version[4];
-    uint8_t HW_Version[4];
+    FW_t FW_Version;
+    RF_t RF_Version;
+    HW_t HW_Version;
 
     bool active;
 
     hid_device *_dev_handle;
 
-    float current[3];
-    float frequency[3];
-    float voltage[3];
-    float boost_Voltage;
+    Current_t current;
+    Frequency_t frequency;
+    Voltage_t voltage;
+    Calibration_t calibration;
 
     uint32_t lastTimeSeenMs;
 };

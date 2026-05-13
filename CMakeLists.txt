@@ -29,12 +29,13 @@ target_include_directories(${CMAKE_LIBRARY_NAME} PUBLIC
     ${HIDAPI_PATH}/hidapi
 )
 
-target_sources(${CMAKE_LIBRARY_NAME} PUBLIC
+target_sources(${CMAKE_LIBRARY_NAME} PRIVATE
     Amfitrack.cpp
     Amfitrack.hpp
 
     Amfitrack_New.cpp
     Amfitrack_New.h
+    AmfitrackDeviceTypes.h
 
     src/Amfitrack_Devices.cpp
     src/Amfitrack_Devices.h
@@ -62,6 +63,7 @@ target_sources(${CMAKE_LIBRARY_NAME} PUBLIC
 
     lib/lib_queue/lib_Queue.c
     lib/lib_queue/lib_Queue.h
+
     
     
 
