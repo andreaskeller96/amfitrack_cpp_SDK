@@ -1,84 +1,77 @@
-//-----------------------------------------------------------------------------
-//
-//                              AMFITECH APS
-//
-//                          ALL RIGHTS RESERVED
-//
-//-----------------------------------------------------------------------------
 #pragma once
-//-----------------------------------------------------------------------------
-// Section: Includes
-//-----------------------------------------------------------------------------
-#include "project_conf.h"
+#include "../lib/hidapi/hidapi/hidapi.h"
+#include <chrono>
+#include <cstdint>
+#include <functional>
+#include <vector>
+#include "../lib/amfiprotapi/lib_AmfiProt_API.hpp"
+#include "Amfitrack_Devices.h"
 
-#include <stddef.h>
-#include <stdint.h>
-#include <stdbool.h>
-#include <string.h>
 #ifdef USE_THREAD_BASED
 #include <mutex>
-#endif // USE_THREAD_BASED
+#endif
 
-#include "hidapi.h"
+static constexpr uint16_t VID             = 0x0C17;
+static constexpr uint16_t PID_Source      = 0x0D01;
+static constexpr uint16_t PID_Sensor      = 0x0D12;
+static constexpr size_t   USB_REPORT_LENGTH = 64;
+static constexpr size_t   MAX_NAME_LENGTH_   = 32;
+static constexpr uint8_t  kUSBReportId      = 0x01;
 
+struct HIDMonitorCallbacks
+{
+    std::function<bool(size_t& queueIdxOut,
+                       size_t& lenOut,
+                       uint8_t& txIdOut,
+                       void*& dataOut)> txPoll;
 
+    std::function<void(uint8_t queueIdx)> txDone;
 
-//-----------------------------------------------------------------------------
-// Section: Define
-//-----------------------------------------------------------------------------
-#define USB_REPORT_LENGTH 64
-#define USE_HID
-//-----------------------------------------------------------------------------
-// Section: Typedef
-//-----------------------------------------------------------------------------
+    std::function<void(const uint8_t* data, size_t len)> rxPush;
+};
 
-//-----------------------------------------------------------------------------
-// Section: Macro
-//-----------------------------------------------------------------------------
-
-//-----------------------------------------------------------------------------
-// Section: Variables
-//-----------------------------------------------------------------------------
-const uint32_t VID = 0x0C17;
-const uint32_t PID_Source = 0x0D01; // Source
-const uint32_t PID_Sensor = 0x0D12; // Sensor
-
-//-----------------------------------------------------------------------------
-// Section: Function prototypes
-//-----------------------------------------------------------------------------
-
-//-----------------------------------------------------------------------------
-// Section: Classes
-//-----------------------------------------------------------------------------
-
+// ─────────────────────────────────────────────────────────────────────────────
 class HIDMonitor
 {
-    static constexpr uint8_t kUSBReportId = 0x01;
-
 public:
-    static HIDMonitor &getInstance()
-    {
-        static HIDMonitor instance;
-        return instance;
-    }
+    explicit HIDMonitor(HIDMonitorCallbacks callbacks);
+    ~HIDMonitor();
 
     bool init();
     void run();
     bool shutdown();
 
+    // Your customer accesses devices through these
+    std::vector<AMFITRACK_Sensor>& sensors() { return _sensors; }
+    std::vector<AMFITRACK_Source>& sources() { return _sources; }
+
 private:
-    HIDMonitor();
-    ~HIDMonitor();
+    void syncDevices();
+    void scanForPid(uint16_t pid);
+    void removeDisconnected();
 
-    int read_blocking(hid_device *dev_handle, void *pData, uint8_t length);
-    int read_timeout(hid_device *dev_handle, void *pData, uint8_t length, int timeout);
-    int write_blocking(hid_device *dev_handle, void const *pData, uint8_t length);
-    int set_nonblocking(hid_device *dev_handle, bool enable);
+    // Separate probe per type since they have different fields to fill
+    bool probeSensorIdentity(AMFITRACK_Sensor& sensor);
+    bool probeSourceIdentity(AMFITRACK_Source& source);
 
-    void scanMatchingDevices();
+    void drainTxQueue();
+    void drainRx();
 
-    bool _initialized;
+    hid_device* findHandleByTxId(uint8_t txId);
+
+    int hidWrite          (hid_device* dev, const void* data, size_t len);
+    int hidReadNonBlocking(hid_device* dev, void* data);
+    int hidReadTimeout    (hid_device* dev, void* data, int timeoutMs);
+
+    HIDMonitorCallbacks _cb;
+
+    bool _initialized = false;
+    std::chrono::steady_clock::time_point _lastScanTime{};
+
+    std::vector<AMFITRACK_Sensor> _sensors;
+    std::vector<AMFITRACK_Source> _sources;
+
 #ifdef USE_THREAD_BASED
-    std::mutex mutex;
+    mutable std::mutex _mutex;
 #endif
 };

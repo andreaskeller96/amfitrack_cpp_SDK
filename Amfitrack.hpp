@@ -20,7 +20,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include "project_conf.h"
+#include "src/project_conf.h"
 #include "lib_AmfiProt_API.hpp"
 #ifdef USE_THREAD_BASED
 #include <mutex>

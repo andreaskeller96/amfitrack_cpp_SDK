@@ -23,6 +23,7 @@ void AMFITRACK_Sensor::reset()
     std::memset(HW_Version, 0, sizeof(HW_Version));
     active = false;
     calcId = 0;
+    _dev_handle = nullptr;
     std::memset(&pose, 0, sizeof(pose));
     std::memset(&imu, 0, sizeof(imu));
 #if defined(_WIN32) || defined(__linux__) || defined(__APPLE__)
@@ -51,5 +52,10 @@ void AMFITRACK_Source::reset()
     std::memset(RF_Version, 0, sizeof(RF_Version));
     std::memset(HW_Version, 0, sizeof(HW_Version));
     active = false;
+    _dev_handle = nullptr;
+    std::memset(current, 0, sizeof(current));
+    std::memset(frequency, 0, sizeof(frequency));
+    std::memset(voltage, 0, sizeof(voltage));
+    boost_Voltage = 0.0F;
     lastTimeSeenMs = 0;
 }

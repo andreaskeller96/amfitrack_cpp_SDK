@@ -79,9 +79,9 @@ void AmfiProt_API::process_incoming_queue(void)
         size_t idx = libQueue_Read(&(this->incomingBulkPointer));
 #if defined(_WIN32) || defined(__linux__) || defined(__APPLE__)
         this->lib_AmfiProt_ProcessFrame(NULL, &(this->incomingBulkData[idx]), this->incomingBulkDat_timestamps[idx], NULL);
-#else
-        this->lib_AmfiProt_ProcessFrame(NULL, &(this->incomingBulkData[idx]), NULL);
 #endif
+        this->lib_AmfiProt_ProcessFrame(NULL, &(this->incomingBulkData[idx]), NULL);
+
         libQueue_Remove(&(this->incomingBulkPointer));
     }
 }
