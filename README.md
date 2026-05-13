@@ -94,7 +94,7 @@ int main() {
             lib_AmfiProt_Amfitrack_Pose_t PoseTester;
             /* Get the pose from AMFITRACK Sensor device ID 2 */
             AMFITRACK.getDevicePose(2, &PoseTester);
-            printf("Pose X: %f | Y: %f | Z: %f \n", PoseTester.position_x_in_m, 
+            LOG_I("Pose X: %f | Y: %f | Z: %f \n", PoseTester.position_x_in_m, 
                                                     PoseTester.position_y_in_m, 
                                                     PoseTester.position_z_in_m
                                                     );

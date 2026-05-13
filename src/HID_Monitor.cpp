@@ -4,6 +4,7 @@
 #include <cstring>
 #include <cwchar>
 #include "../lib/amfiprotapi/lib_AmfiProt.hpp"
+#include "../lib/lib_log/lib_log.h"
 
 static constexpr int kProbeTimeoutMs = 10;
 static constexpr int kProbeMaxAttempts = 10;
@@ -129,7 +130,7 @@ bool HIDMonitor::init()
 		return true;
 	if (hid_init() != 0)
 	{
-		std::printf("hid_init() failed\n");
+		LOG_E("hid_init() failed");
 		return false;
 	}
 	_initialized = true;
@@ -218,7 +219,7 @@ void HIDMonitor::scanForPid(uint16_t pid)
 				hid_close(handle);
 				continue;
 			}
-			std::printf("Sensor connected: id=%u name=%s\n", sensor.deviceId, sensor.name);
+			LOG_I("Sensor connected: id=%u name=%s", sensor.deviceId, sensor.name);
 			_sensors.push_back(sensor);
 		}
 		else
@@ -231,7 +232,7 @@ void HIDMonitor::scanForPid(uint16_t pid)
 				hid_close(handle);
 				continue;
 			}
-			std::printf("Source connected: id=%u name=%s\n", source.deviceId, source.name);
+			LOG_I("Source connected: id=%u name=%s", source.deviceId, source.name);
 			_sources.push_back(source);
 		}
 	}
@@ -255,7 +256,7 @@ void HIDMonitor::removeDisconnected()
 	_sensors.erase(std::remove_if(_sensors.begin(), _sensors.end(), [&](AMFITRACK_Sensor &s)
 								  {
         if (stillPresent(s._dev_handle, PID_Sensor)) return false;
-        std::printf("Sensor disconnected: id=%u name=%s\n", s.deviceId, s.name);
+        LOG_I("Sensor disconnected: id=%u name=%s", s.deviceId, s.name);
         if (s._dev_handle) { hid_close(s._dev_handle); s._dev_handle = nullptr; }
         return true; }),
 				   _sensors.end());
@@ -263,7 +264,7 @@ void HIDMonitor::removeDisconnected()
 	_sources.erase(std::remove_if(_sources.begin(), _sources.end(), [&](AMFITRACK_Source &s)
 								  {
         if (stillPresent(s._dev_handle, PID_Source)) return false;
-        std::printf("Source disconnected: id=%u name=%s\n", s.deviceId, s.name);
+        LOG_I("Source disconnected: id=%u name=%s\n", s.deviceId, s.name);
         if (s._dev_handle) { hid_close(s._dev_handle); s._dev_handle = nullptr; }
         return true; }),
 				   _sources.end());
@@ -354,7 +355,7 @@ void HIDMonitor::drainTxQueue()
 	}
 	else
 	{
-		std::printf("TxID %u not matched to any connected device\n", txId);
+		LOG_I("TxID %u not matched to any connected device", txId);
 	}
 
 	if (sent)

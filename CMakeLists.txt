@@ -63,6 +63,10 @@ target_sources(${CMAKE_LIBRARY_NAME} PRIVATE
 
     lib/lib_queue/lib_Queue.c
     lib/lib_queue/lib_Queue.h
+
+    lib/lib_log/lib_log.cpp
+    lib/lib_log/lib_log.h
+
     src/Amfitrack_task.cpp
     src/Amfitrack_task.h
 

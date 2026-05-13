@@ -2,6 +2,7 @@
 #include "src/project_conf.h"
 #include "lib_AmfiProt_API.hpp"
 #include "Amfitrack.hpp"
+#include "lib/lib_log/lib_log.h"
 
 #ifdef USE_USB
 #include "HID_Monitor.h"
@@ -70,9 +71,7 @@ void AMFITRACK::background_amfitrack_task(AMFITRACK *inst)
 	AmfiProt_API &amfiprot_api = AmfiProt_API::getInstance();
 	AMFITRACK &AMFITRACK = AMFITRACK::getInstance();
 
-#ifdef AMFITRACK_DEBUG_INFO
-	std::cout << "Background thread started!" << std::endl;
-#endif // AMFITRACK_DEBUG_INFO
+	LOG_D("Background thread started!");
 
 	while (!stop_running)
 	{
@@ -100,9 +99,7 @@ void AMFITRACK::start_amfitrack_task(void)
 #if defined(USE_THREAD_BASED)
 	stop_running = false;
 
-#ifdef AMFITRACK_DEBUG_INFO
-	std::cout << "Starting Background thread!" << std::endl;
-#endif // AMFITRACK_DEBUG_INFO
+	LOG_D("Starting Background thread!");
 
 	// Create a thread object
 	std::thread background_thread(background_amfitrack_task, this);
@@ -203,9 +200,7 @@ void AMFITRACK::setDeviceName(uint8_t DeviceID, char *name, uint8_t length)
 	}
 	Name[DeviceID][length] = '\0'; // Ensure null termination
 
-#ifdef AMFITRACK_DEBUG_INFO
-	std::cout << Name[DeviceID] << std::endl;
-#endif // AMFITRACK_DEBUG_INFO
+	LOG_D(Name[DeviceID]);
 }
 
 void AMFITRACK::setConfiguration(uint8_t DeviceID, uint32_t UID, lib_Generic_Parameter_Value_t parameter)
@@ -234,7 +229,7 @@ bool AMFITRACK::checkDeviceDisconnected(uint8_t DeviceID)
 		const std::lock_guard<std::mutex> lock(mutDeviceActive);
 #endif // USE_THREAD_BASED
 		DeviceActive[DeviceID] = false;
-		std::cout << "Device " << std::dec << static_cast<unsigned>(DeviceID) << " disconnected" << std::endl;
+		LOG_I("Device %u disconnected", DeviceID);
 		return true;
 	}
 #endif
@@ -248,12 +243,11 @@ void AMFITRACK::setDeviceActive(uint8_t DeviceID)
 	const std::lock_guard<std::mutex> lock(mutDeviceActive);
 #endif // USE_THREAD_BASED
 	if (!DeviceActive[DeviceID])
-		std::cout << "Device " << std::dec << static_cast<unsigned>(DeviceID) << " connected" << std::endl;
+		LOG_I("Device %u connected", DeviceID);
 	DeviceActive[DeviceID] = true;
 	DeviceLastTimeSeen[DeviceID] = time(0);
-#ifdef AMFITRACK_DEBUG_INFO
-	std::cout << "Device " << DeviceID << " is active" << std::endl;
-#endif // AMFITRACK_DEBUG_INFO
+	LOG_D("Device is active", DeviceID);
+
 #endif
 }
 
@@ -271,10 +265,6 @@ void AMFITRACK::setDevicePose(uint8_t DeviceID, lib_AmfiProt_Amfitrack_Pose_t Po
 	const std::lock_guard<std::mutex> lock(mutPosition);
 #endif // USE_THREAD_BASED
 	memcpy(&Position[DeviceID], &Pose, sizeof(lib_AmfiProt_Amfitrack_Pose_t));
-#ifdef AMFITRACK_DEBUG_INFO
-	std::cout << "Pose set!" << std::endl;
-	// printf("Pose X %.3f | Y %.3f | Z %.3f \n", this->Pose[DeviceID].position_x_in_m, this->Pose[DeviceID].position_y_in_m, this->Pose[DeviceID].position_z_in_m);
-#endif // AMFITRACK_DEBUG_INFO
 }
 
 void AMFITRACK::getDevicePose(uint8_t DeviceID, lib_AmfiProt_Amfitrack_Pose_t *Pose)

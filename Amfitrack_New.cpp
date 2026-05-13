@@ -11,6 +11,7 @@
 //-----------------------------------------------------------------------------
 #include "Amfitrack_New.h"
 
+#include "lib/lib_log/lib_log.h"
 #include "src/project_conf.h"
 #include "src/HID_Monitor.h"
 #include "src/Amfitrack_task.h"
@@ -171,7 +172,7 @@ bool AMFITRACK_NEW::set(uint8_t device_id, bool isActive)
 	}
 	else
 	{
-		printf("Device: %u disconnected! \r\n");
+		LOG_I("Device: %u disconnected!");
 	}
 
 	return true;
