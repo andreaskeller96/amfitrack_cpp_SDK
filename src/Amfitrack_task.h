@@ -30,9 +30,15 @@
 // Section: Class
 //-----------------------------------------------------------------------------
 
-class Callbacks
+class amfitrack_task
 {
   public:
+	static void init();
+	static void run();
+
+  private:
+	static void keepAlivePing();
+	static void checkDisconnected();
 };
 
 #endif
