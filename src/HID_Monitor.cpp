@@ -1,3 +1,14 @@
+//-----------------------------------------------------------------------------
+//
+//                              AMFITECH APS
+//
+//                          ALL RIGHTS RESERVED
+//
+//-----------------------------------------------------------------------------
+
+//-----------------------------------------------------------------------------
+// Section: Includes
+//-----------------------------------------------------------------------------
 #include "HID_Monitor.h"
 #include <algorithm>
 #include <cstdio>
@@ -6,13 +17,26 @@
 #include "../lib/amfiprotapi/lib_AmfiProt.hpp"
 #include "../lib/lib_log/lib_log.h"
 
+//-----------------------------------------------------------------------------
+// Section: Define
+//-----------------------------------------------------------------------------
+
+//-----------------------------------------------------------------------------
+// Section: Typedef
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+// Section: Macro
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+// Section: Variables
+//-----------------------------------------------------------------------------
 static constexpr int kProbeTimeoutMs = 10;
 static constexpr int kProbeMaxAttempts = 10;
 static constexpr int kScanIntervalS = 1;
 
-// ─────────────────────────────────────────────────────────────────────────────
-// File-local helpers
-// ─────────────────────────────────────────────────────────────────────────────
+//-----------------------------------------------------------------------------
+// Section: Function prototypes
+//-----------------------------------------------------------------------------
 static bool isSameDevice(hid_device *handle, const hid_device_info *info)
 {
 	if (!handle || !info)
@@ -33,15 +57,13 @@ static bool parseIdReply(const lib_AmfiProt_Frame_t &f, uint8_t &deviceId, uint3
 		f.payload[0] != lib_AmfiProt_PayloadID_ReplyDeviceID)
 		return false;
 
-	deviceId = f.payload[1];
-	uuid[0] = uuid[1] = uuid[2] = 0;
-	uint8_t idx = 0;
-	for (uint8_t i = 2; i < sizeof(lib_AmfiProt_DeviceID_t) - sizeof(uint32_t) && idx < 3; ++i)
-	{
-		uuid[idx] |= static_cast<uint32_t>(f.payload[i]) << (((i - 2) % 4) * 8);
-		if ((i - 2) % 4 == 3)
-			++idx;
-	}
+	lib_AmfiProt_DeviceID idFrame;
+	memcpy(&idFrame, &f.payload[0], sizeof(lib_AmfiProt_DeviceID));
+	deviceId = idFrame.TxID;
+	uuid[0] = idFrame.UUID[0];
+	uuid[1] = idFrame.UUID[1];
+	uuid[2] = idFrame.UUID[2];
+
 	return true;
 }
 
@@ -108,8 +130,9 @@ static bool probeDeviceIdentity(hid_device *handle,
 
 	return true; // name is optional — id is enough
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
+//-----------------------------------------------------------------------------
+// Section: Functions
+//-----------------------------------------------------------------------------
 HIDMonitor::HIDMonitor(HIDMonitorCallbacks callbacks)
 	: _cb(std::move(callbacks))
 {
@@ -120,7 +143,6 @@ HIDMonitor::~HIDMonitor()
 	shutdown();
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 bool HIDMonitor::init()
 {
 #ifdef USE_THREAD_BASED
@@ -177,7 +199,6 @@ bool HIDMonitor::shutdown()
 	return true;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 void HIDMonitor::syncDevices()
 {
 	const auto now = std::chrono::steady_clock::now();
@@ -270,7 +291,6 @@ void HIDMonitor::removeDisconnected()
 				   _sources.end());
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 bool HIDMonitor::probeSensorIdentity(AMFITRACK_Sensor &sensor)
 {
 	uint8_t deviceId = 0;
@@ -282,7 +302,7 @@ bool HIDMonitor::probeSensorIdentity(AMFITRACK_Sensor &sensor)
 	auto readFn = [this](hid_device *h, void *d, int t)
 	{ return hidReadTimeout(h, d, t); };
 
-	if (!probeDeviceIdentity(sensor._dev_handle, writeFn, readFn, deviceId, uuid, name, sizeof(name)))
+	if (!probeDeviceIdentity(sensor._dev_handle, writeFn, readFn, deviceId, uuid, name, 50))
 		return false;
 
 	sensor.deviceId = deviceId;
@@ -290,9 +310,6 @@ bool HIDMonitor::probeSensorIdentity(AMFITRACK_Sensor &sensor)
 	sensor.uuid[1] = uuid[1];
 	sensor.uuid[2] = uuid[2];
 	std::snprintf(sensor.name, sizeof(sensor.name), "%s", name);
-#if defined(_WIN32) || defined(__linux__) || defined(__APPLE__)
-	sensor.sensorTimestamp = std::chrono::steady_clock::now();
-#endif
 	sensor.lastTimeSeenMs = static_cast<uint32_t>(
 		std::chrono::duration_cast<std::chrono::milliseconds>(
 			std::chrono::steady_clock::now().time_since_epoch())
@@ -311,7 +328,7 @@ bool HIDMonitor::probeSourceIdentity(AMFITRACK_Source &source)
 	auto readFn = [this](hid_device *h, void *d, int t)
 	{ return hidReadTimeout(h, d, t); };
 
-	if (!probeDeviceIdentity(source._dev_handle, writeFn, readFn, deviceId, uuid, name, sizeof(name)))
+	if (!probeDeviceIdentity(source._dev_handle, writeFn, readFn, deviceId, uuid, name, 50))
 		return false;
 
 	source.deviceId = deviceId;
@@ -326,7 +343,6 @@ bool HIDMonitor::probeSourceIdentity(AMFITRACK_Source &source)
 	return true;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 void HIDMonitor::drainTxQueue()
 {
 	if (!_cb.txPoll || !_cb.txDone)
@@ -386,7 +402,6 @@ void HIDMonitor::drainRx()
 		readFrom(s._dev_handle);
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 hid_device *HIDMonitor::findHandleByTxId(uint8_t txId)
 {
 	for (auto &s : _sensors)
@@ -398,7 +413,6 @@ hid_device *HIDMonitor::findHandleByTxId(uint8_t txId)
 	return nullptr;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 int HIDMonitor::hidWrite(hid_device *dev, const void *data, size_t len)
 {
 	if (!dev || !data)

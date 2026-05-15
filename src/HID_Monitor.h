@@ -1,16 +1,30 @@
+//-----------------------------------------------------------------------------
+//
+//                              AMFITECH APS
+//
+//                          ALL RIGHTS RESERVED
+//
+//-----------------------------------------------------------------------------
 #pragma once
+//-----------------------------------------------------------------------------
+// Section: Includes
+//-----------------------------------------------------------------------------
 #include "../lib/hidapi/hidapi/hidapi.h"
 #include <chrono>
 #include <cstdint>
 #include <functional>
 #include <vector>
 #include "../lib/amfiprotapi/lib_AmfiProt_API.hpp"
-#include "Amfitrack_Devices.h"
+#include "Amfitrack_Sensor.h"
+#include "Amfitrack_Source.h"
 
 #ifdef USE_THREAD_BASED
 #include <mutex>
 #endif
 
+//-----------------------------------------------------------------------------
+// Section: Define
+//-----------------------------------------------------------------------------
 static constexpr uint16_t VID = 0x0C17;
 static constexpr uint16_t PID_Source = 0x0D01;
 static constexpr uint16_t PID_Sensor = 0x0D12;
@@ -18,6 +32,9 @@ static constexpr size_t USB_REPORT_LENGTH = 64;
 static constexpr size_t MAX_NAME_LENGTH_ = 32;
 static constexpr uint8_t kUSBReportId = 0x01;
 
+//-----------------------------------------------------------------------------
+// Section: Typedef
+//-----------------------------------------------------------------------------
 struct HIDMonitorCallbacks
 {
 	std::function<bool(size_t &queueIdxOut,
@@ -30,8 +47,17 @@ struct HIDMonitorCallbacks
 
 	std::function<void(const uint8_t *data, size_t len)> rxPush;
 };
+//-----------------------------------------------------------------------------
+// Section: Macro
+//-----------------------------------------------------------------------------
 
-// ─────────────────────────────────────────────────────────────────────────────
+//-----------------------------------------------------------------------------
+// Section: Variables
+//-----------------------------------------------------------------------------
+
+//-----------------------------------------------------------------------------
+// Section: Class
+//-----------------------------------------------------------------------------
 class HIDMonitor
 {
   public:
