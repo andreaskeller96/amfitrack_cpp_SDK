@@ -53,7 +53,7 @@ static void _run_all_amfitrack()
 	amfitrack_task::run();
 }
 
-void AMFITRACK_NEW::background_amfitrack_task(AMFITRACK_NEW *inst)
+void AMFITRACK::background_amfitrack_task(AMFITRACK *inst)
 {
 	(void)inst;
 	while (!stop_running)
@@ -64,13 +64,13 @@ void AMFITRACK_NEW::background_amfitrack_task(AMFITRACK_NEW *inst)
 	}
 }
 
-AMFITRACK_NEW &AMFITRACK_NEW::getInstance()
+AMFITRACK &AMFITRACK::getInstance()
 {
-	static AMFITRACK_NEW instance;
+	static AMFITRACK instance;
 	return instance;
 }
 
-void AMFITRACK_NEW::init()
+void AMFITRACK::init()
 {
 	amfiprot_api = &AmfiProt_API::getInstance();
 	AMFITRACK_Devices::getInstance().reset_devices();
@@ -101,7 +101,7 @@ void AMFITRACK_NEW::init()
 	amfitrack_task::init();
 }
 
-void AMFITRACK_NEW::start_task()
+void AMFITRACK::start_task()
 {
 	stop_running = false;
 	// Create a thread object
@@ -110,22 +110,22 @@ void AMFITRACK_NEW::start_task()
 	background_thread.detach();
 }
 
-void AMFITRACK_NEW::stop_task()
+void AMFITRACK::stop_task()
 {
 	stop_running = true;
 }
 
-void AMFITRACK_NEW::run()
+void AMFITRACK::run()
 {
 	_run_all_amfitrack();
 }
 
-void AMFITRACK_NEW::reset_devices()
+void AMFITRACK::reset_devices()
 {
 	AMFITRACK_Devices::getInstance().reset_devices();
 }
 
-bool AMFITRACK_NEW::get_sensor(uint8_t device_id, AMFITRACK_Sensor *sensor) const
+bool AMFITRACK::get_sensor(uint8_t device_id, AMFITRACK_Sensor *sensor) const
 {
 	return AMFITRACK_Devices::getInstance().get_sensor(device_id, sensor);
 }
@@ -135,7 +135,7 @@ bool reset_sensor(uint8_t device_id)
 	return AMFITRACK_Devices::getInstance().reset_sensor(device_id);
 }
 
-bool AMFITRACK_NEW::get_source(uint8_t device_id, AMFITRACK_Source *source) const
+bool AMFITRACK::get_source(uint8_t device_id, AMFITRACK_Source *source) const
 {
 	return AMFITRACK_Devices::getInstance().get_source(device_id, source);
 }
@@ -148,30 +148,30 @@ bool reset_source(uint8_t device_id)
 //-----------------------------------------------------------------------------
 // Old function will be deprecated
 //-----------------------------------------------------------------------------
-void AMFITRACK_NEW::initialize_amfitrack()
+void AMFITRACK::initialize_amfitrack()
 {
 	init();
 }
-void AMFITRACK_NEW::start_amfitrack_task(void)
+void AMFITRACK::start_amfitrack_task(void)
 {
 	start_task();
 }
-void AMFITRACK_NEW::stop_amfitrack_task(void)
+void AMFITRACK::stop_amfitrack_task(void)
 {
 	stop_task();
 }
-void AMFITRACK_NEW::amfitrack_main_loop(void)
+void AMFITRACK::amfitrack_main_loop(void)
 {
 	run();
 }
 
-bool AMFITRACK_NEW::getDeviceActive(uint8_t DeviceID)
+bool AMFITRACK::getDeviceActive(uint8_t DeviceID)
 {
 	AMFITRACK_Sensor sensor;
 	AMFITRACK_Devices::getInstance().get_sensor(DeviceID, &sensor);
 	return sensor.active;
 }
-void AMFITRACK_NEW::getDevicePose(uint8_t DeviceID, lib_AmfiProt_Amfitrack_Pose_t *Pose)
+void AMFITRACK::getDevicePose(uint8_t DeviceID, lib_AmfiProt_Amfitrack_Pose_t *Pose)
 {
 	AMFITRACK_Sensor sensor;
 	AMFITRACK_Devices::getInstance().get_sensor(DeviceID, &sensor);
@@ -184,7 +184,7 @@ void AMFITRACK_NEW::getDevicePose(uint8_t DeviceID, lib_AmfiProt_Amfitrack_Pose_
 	Pose->orientation_z = sensor.pose.Orientation_Z;
 	Pose->orientation_w = sensor.pose.Orientation_W;
 }
-void AMFITRACK_NEW::getDeviceIMU(uint8_t DeviceID, lib_AmfiProt_Amfitrack_IMU_t *imuData)
+void AMFITRACK::getDeviceIMU(uint8_t DeviceID, lib_AmfiProt_Amfitrack_IMU_t *imuData)
 {
 	AMFITRACK_Sensor sensor;
 	AMFITRACK_Devices::getInstance().get_sensor(DeviceID, &sensor);
@@ -196,7 +196,7 @@ void AMFITRACK_NEW::getDeviceIMU(uint8_t DeviceID, lib_AmfiProt_Amfitrack_IMU_t 
 	imuData->rotation_y_in_rad_per_sec = sensor.imu.Rotation_Y;
 	imuData->rotation_z_in_rad_per_sec = sensor.imu.Rotation_Z;
 }
-void AMFITRACK_NEW::getSensorMeasurements(uint8_t DeviceID, lib_AmfiProt_Amfitrack_Sensor_Measurement_t *SensorMeasurement)
+void AMFITRACK::getSensorMeasurements(uint8_t DeviceID, lib_AmfiProt_Amfitrack_Sensor_Measurement_t *SensorMeasurement)
 {
 	AMFITRACK_Sensor sensor;
 	AMFITRACK_Devices::getInstance().get_sensor(DeviceID, &sensor);
@@ -204,7 +204,7 @@ void AMFITRACK_NEW::getSensorMeasurements(uint8_t DeviceID, lib_AmfiProt_Amfitra
 }
 
 #if defined(_WIN32) || defined(__linux__) || defined(__APPLE__)
-void AMFITRACK_NEW::getSensorTimestamp(uint8_t DeviceID, std::chrono::steady_clock::time_point *time_stamp)
+void AMFITRACK::getSensorTimestamp(uint8_t DeviceID, std::chrono::steady_clock::time_point *time_stamp)
 {
 	AMFITRACK_Sensor sensor;
 	AMFITRACK_Devices::getInstance().get_sensor(DeviceID, &sensor);

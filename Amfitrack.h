@@ -36,10 +36,10 @@
 //-----------------------------------------------------------------------------
 // Section: Class
 //-----------------------------------------------------------------------------
-class AMFITRACK_NEW
+class AMFITRACK
 {
   public:
-	static AMFITRACK_NEW &getInstance();
+	static AMFITRACK &getInstance();
 
 	void init();
 	void start_task();
@@ -73,13 +73,13 @@ class AMFITRACK_NEW
 	//-----------------------------------------------------------------------------
 
   private:
-	AMFITRACK_NEW() = default;
-	~AMFITRACK_NEW() = default;
+	AMFITRACK() = default;
+	~AMFITRACK() = default;
 
-	AMFITRACK_NEW(AMFITRACK_NEW const &) = delete;
-	AMFITRACK_NEW &operator=(AMFITRACK_NEW const &) = delete;
+	AMFITRACK(AMFITRACK const &) = delete;
+	AMFITRACK &operator=(AMFITRACK const &) = delete;
 
-	static void background_amfitrack_task(AMFITRACK_NEW *);
+	static void background_amfitrack_task(AMFITRACK *);
 };
 
 #endif
