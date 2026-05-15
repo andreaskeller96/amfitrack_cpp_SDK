@@ -16,6 +16,10 @@
 #include <cwchar>
 #include "../lib/amfiprotapi/lib_AmfiProt.hpp"
 #include "../lib/lib_log/lib_log.h"
+#include "../Amfitrack.h"
+#include "Amfitrack_Devices.h"
+#include "Amfitrack_Sensor.h"
+#include "Amfitrack_Source.h"
 
 //-----------------------------------------------------------------------------
 // Section: Define
@@ -130,6 +134,18 @@ static bool probeDeviceIdentity(hid_device *handle,
 
 	return true; // name is optional — id is enough
 }
+
+bool stillPresent(hid_device *handle, uint16_t pid)
+{
+	if (!handle)
+		return false;
+	hid_device_info *list = hid_enumerate(VID, pid);
+	bool found = false;
+	for (const hid_device_info *info = list; info && !found; info = info->next)
+		found = isSameDevice(handle, info);
+	hid_free_enumeration(list);
+	return found;
+}
 //-----------------------------------------------------------------------------
 // Section: Functions
 //-----------------------------------------------------------------------------
@@ -177,20 +193,26 @@ bool HIDMonitor::shutdown()
 #ifdef USE_THREAD_BASED
 	std::lock_guard<std::mutex> lock(_mutex);
 #endif
-	for (auto &s : _sensors)
+	for (uint8_t i = 0; i < AMFITRACK_DEVICE_COUNT; i++)
+	{
+		AMFITRACK_Sensor s;
+		AMFITRACK::getInstance().get_sensor(i, &s);
 		if (s._dev_handle)
 		{
 			hid_close(s._dev_handle);
 			s._dev_handle = nullptr;
 		}
-	for (auto &s : _sources)
+	}
+	for (uint8_t i = 0; i < AMFITRACK_DEVICE_COUNT; i++)
+	{
+		AMFITRACK_Source s;
+		AMFITRACK::getInstance().get_source(i, &s);
 		if (s._dev_handle)
 		{
 			hid_close(s._dev_handle);
 			s._dev_handle = nullptr;
 		}
-	_sensors.clear();
-	_sources.clear();
+	}
 	if (_initialized)
 	{
 		hid_exit();
@@ -217,44 +239,72 @@ void HIDMonitor::scanForPid(uint16_t pid)
 	hid_device_info *list = hid_enumerate(VID, pid);
 	for (const hid_device_info *info = list; info; info = info->next)
 	{
-		// Skip already-tracked devices
-		auto alreadyOpen = [&](const auto &d)
-		{ return isSameDevice(d._dev_handle, info); };
-		if (pid == PID_Sensor && std::any_of(_sensors.begin(), _sensors.end(), alreadyOpen))
-			continue;
-		if (pid == PID_Source && std::any_of(_sources.begin(), _sources.end(), alreadyOpen))
+		bool alreadyOpen = false;
+
+		if (pid == PID_Sensor)
+		{
+			for (uint8_t i = 0; i < AMFITRACK_DEVICE_COUNT; i++)
+			{
+				AMFITRACK_Sensor _sensors;
+				AMFITRACK::getInstance().get_sensor(i, &_sensors);
+				if (_sensors._dev_handle)
+				{
+					if (isSameDevice(_sensors._dev_handle, info))
+					{
+						alreadyOpen = true;
+						break;
+					}
+				}
+			}
+		}
+		else if (pid == PID_Source)
+		{
+			for (uint8_t i = 0; i < AMFITRACK_DEVICE_COUNT; i++)
+			{
+				AMFITRACK_Source _sources;
+				AMFITRACK::getInstance().get_source(i, &_sources);
+				if (isSameDevice(_sources._dev_handle, info))
+				{
+					alreadyOpen = true;
+					break;
+				}
+			}
+		}
+
+		if (alreadyOpen)
 			continue;
 
 		hid_device *handle = hid_open_path(info->path);
 		if (!handle)
 			continue;
+
 		hid_set_nonblocking(handle, 1);
 
 		if (pid == PID_Sensor)
 		{
-			AMFITRACK_Sensor sensor;
+			AMFITRACK_HID sensor;
 			sensor._dev_handle = handle;
-			sensor.active = true;
 			if (!probeSensorIdentity(sensor))
 			{
 				hid_close(handle);
 				continue;
 			}
+			AMFITRACK_Devices::getInstance().set(sensor.deviceId, true);
+			AMFITRACK_Devices::getInstance().set_hid(sensor.deviceId, sensor._dev_handle, true);
 			LOG_I("Sensor connected: id=%u name=%s", sensor.deviceId, sensor.name);
-			_sensors.push_back(sensor);
 		}
 		else
 		{
-			AMFITRACK_Source source;
+			AMFITRACK_HID source;
 			source._dev_handle = handle;
-			source.active = true;
 			if (!probeSourceIdentity(source))
 			{
 				hid_close(handle);
 				continue;
 			}
+			AMFITRACK_Devices::getInstance().set(source.deviceId, true);
+			AMFITRACK_Devices::getInstance().set_hid(source.deviceId, source._dev_handle, false);
 			LOG_I("Source connected: id=%u name=%s", source.deviceId, source.name);
-			_sources.push_back(source);
 		}
 	}
 	hid_free_enumeration(list);
@@ -262,36 +312,54 @@ void HIDMonitor::scanForPid(uint16_t pid)
 
 void HIDMonitor::removeDisconnected()
 {
-	auto stillPresent = [](hid_device *handle, uint16_t pid) -> bool
+	for (uint8_t i = 0; i < AMFITRACK_DEVICE_COUNT; i++)
 	{
-		if (!handle)
-			return false;
-		hid_device_info *list = hid_enumerate(VID, pid);
-		bool found = false;
-		for (const hid_device_info *info = list; info && !found; info = info->next)
-			found = isSameDevice(handle, info);
-		hid_free_enumeration(list);
-		return found;
-	};
+		bool sensorDisconnected = false;
+		bool sourceDisconnected = false;
+		AMFITRACK_Sensor sensor;
+		AMFITRACK_Source source;
+		AMFITRACK_Devices::getInstance().get_sensor(i, &sensor);
+		AMFITRACK_Devices::getInstance().get_source(i, &source);
 
-	_sensors.erase(std::remove_if(_sensors.begin(), _sensors.end(), [&](AMFITRACK_Sensor &s)
-								  {
-        if (stillPresent(s._dev_handle, PID_Sensor)) return false;
-        LOG_I("Sensor disconnected: id=%u name=%s", s.deviceId, s.name);
-        if (s._dev_handle) { hid_close(s._dev_handle); s._dev_handle = nullptr; }
-        return true; }),
-				   _sensors.end());
+		if (!sensor._dev_handle || stillPresent(sensor._dev_handle, PID_Sensor))
+		{
+			if (!source._dev_handle || stillPresent(source._dev_handle, PID_Source))
+			{
+				continue;
+			}
+			else
+			{
+				sourceDisconnected = true;
+			}
+		}
+		else
+		{
+			sensorDisconnected = true;
+		}
 
-	_sources.erase(std::remove_if(_sources.begin(), _sources.end(), [&](AMFITRACK_Source &s)
-								  {
-        if (stillPresent(s._dev_handle, PID_Source)) return false;
-        LOG_I("Source disconnected: id=%u name=%s\n", s.deviceId, s.name);
-        if (s._dev_handle) { hid_close(s._dev_handle); s._dev_handle = nullptr; }
-        return true; }),
-				   _sources.end());
+		if (sensorDisconnected)
+		{
+			LOG_I("Sensor disconnected: id=%u name=%s", sensor.deviceId, sensor.name);
+			if (sensor._dev_handle)
+			{
+				hid_close(sensor._dev_handle);
+				AMFITRACK_Devices::getInstance().set_hid(i, NULL, true);
+				sourceDisconnected = false;
+			}
+		}
+		if (sourceDisconnected)
+		{
+			LOG_I("Source disconnected: id=%u name=%s", source.deviceId, source.name);
+			if (source._dev_handle)
+			{
+				hid_close(source._dev_handle);
+				AMFITRACK_Devices::getInstance().set_hid(i, NULL, false);
+			}
+		}
+	}
 }
 
-bool HIDMonitor::probeSensorIdentity(AMFITRACK_Sensor &sensor)
+bool HIDMonitor::probeSensorIdentity(AMFITRACK_HID &sensor)
 {
 	uint8_t deviceId = 0;
 	uint32_t uuid[3]{};
@@ -310,14 +378,10 @@ bool HIDMonitor::probeSensorIdentity(AMFITRACK_Sensor &sensor)
 	sensor.uuid[1] = uuid[1];
 	sensor.uuid[2] = uuid[2];
 	std::snprintf(sensor.name, sizeof(sensor.name), "%s", name);
-	sensor.lastTimeSeenMs = static_cast<uint32_t>(
-		std::chrono::duration_cast<std::chrono::milliseconds>(
-			std::chrono::steady_clock::now().time_since_epoch())
-			.count());
 	return true;
 }
 
-bool HIDMonitor::probeSourceIdentity(AMFITRACK_Source &source)
+bool HIDMonitor::probeSourceIdentity(AMFITRACK_HID &source)
 {
 	uint8_t deviceId = 0;
 	uint32_t uuid[3]{};
@@ -336,10 +400,6 @@ bool HIDMonitor::probeSourceIdentity(AMFITRACK_Source &source)
 	source.uuid[1] = uuid[1];
 	source.uuid[2] = uuid[2];
 	std::snprintf(source.name, sizeof(source.name), "%s", name);
-	source.lastTimeSeenMs = static_cast<uint32_t>(
-		std::chrono::duration_cast<std::chrono::milliseconds>(
-			std::chrono::steady_clock::now().time_since_epoch())
-			.count());
 	return true;
 }
 
@@ -358,12 +418,20 @@ void HIDMonitor::drainTxQueue()
 	bool sent = false;
 	if (txId == 255)
 	{
-		for (auto &s : _sensors)
+		for (uint8_t i = 0; i < AMFITRACK_DEVICE_COUNT; i++)
+		{
+			AMFITRACK_Sensor s;
+			AMFITRACK_Devices::getInstance().get_sensor(i, &s);
 			if (s._dev_handle && hidWrite(s._dev_handle, txData, dataLen) >= 0)
 				sent = true;
-		for (auto &s : _sources)
+		}
+		for (uint8_t i = 0; i < AMFITRACK_DEVICE_COUNT; i++)
+		{
+			AMFITRACK_Source s;
+			AMFITRACK_Devices::getInstance().get_source(i, &s);
 			if (s._dev_handle && hidWrite(s._dev_handle, txData, dataLen) >= 0)
 				sent = true;
+		}
 	}
 	else if (hid_device *handle = findHandleByTxId(txId))
 	{
@@ -392,24 +460,81 @@ void HIDMonitor::drainRx()
 			const int n = hidReadNonBlocking(handle, packet);
 			if (n <= 0)
 				break;
-			_cb.rxPush(packet, (size_t)n);
+
+			uint8_t sourceAddress = 0;
+			for (uint8_t i = 0; i < AMFITRACK_DEVICE_COUNT; i++)
+			{
+				AMFITRACK_Sensor sensor;
+				AMFITRACK_Source source;
+				AMFITRACK_Devices::getInstance().get_sensor(i, &sensor);
+				AMFITRACK_Devices::getInstance().get_source(i, &source);
+
+				if (sensor._dev_handle == handle)
+				{
+					sourceAddress = sensor.deviceId;
+					break;
+				}
+				else if (source._dev_handle == handle)
+				{
+					sourceAddress = source.deviceId;
+					break;
+				}
+			}
+			_cb.rxPush(sourceAddress, packet, (size_t)n);
 		}
 	};
 
-	for (auto &s : _sensors)
-		readFrom(s._dev_handle);
-	for (auto &s : _sources)
-		readFrom(s._dev_handle);
+	for (uint8_t i = 0; i < AMFITRACK_DEVICE_COUNT; i++)
+	{
+		AMFITRACK_Sensor s;
+		AMFITRACK_Devices::getInstance().get_sensor(i, &s);
+		if (s._dev_handle)
+			readFrom(s._dev_handle);
+	}
+	for (uint8_t i = 0; i < AMFITRACK_DEVICE_COUNT; i++)
+	{
+		AMFITRACK_Source s;
+		AMFITRACK_Devices::getInstance().get_source(i, &s);
+		if (s._dev_handle)
+			readFrom(s._dev_handle);
+	}
 }
 
-hid_device *HIDMonitor::findHandleByTxId(uint8_t txId)
+hid_device *
+HIDMonitor::findHandleByTxId(uint8_t txId)
 {
-	for (auto &s : _sensors)
+	hid_device *hidHandle = nullptr;
+	for (uint8_t i = 0; i < AMFITRACK_DEVICE_COUNT; i++)
+	{
+		AMFITRACK_Sensor s;
+		AMFITRACK_Devices::getInstance().get_sensor(i, &s);
+		if (s.deviceId == txId)
+		{
+
+			if (!s._dev_handle)
+			{
+				AMFITRACK_Sensor hub;
+				AMFITRACK_Devices::getInstance().get_sensor(s.hub_ID, &hub);
+				if (hub._dev_handle)
+				{
+					hidHandle = hub._dev_handle;
+				}
+			}
+			else
+			{
+				hidHandle = s._dev_handle;
+			}
+			return hidHandle;
+		}
+	}
+	for (uint8_t i = 0; i < AMFITRACK_DEVICE_COUNT; i++)
+	{
+		AMFITRACK_Source s;
+		AMFITRACK_Devices::getInstance().get_source(i, &s);
 		if (s.deviceId == txId)
 			return s._dev_handle;
-	for (auto &s : _sources)
-		if (s.deviceId == txId)
-			return s._dev_handle;
+	}
+
 	return nullptr;
 }
 

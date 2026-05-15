@@ -45,7 +45,7 @@ struct HIDMonitorCallbacks
 
 	std::function<void(uint8_t queueIdx)> txDone;
 
-	std::function<void(const uint8_t *data, size_t len)> rxPush;
+	std::function<void(uint8_t sourceAddres, const uint8_t *data, size_t len)> rxPush;
 };
 //-----------------------------------------------------------------------------
 // Section: Macro
@@ -58,6 +58,16 @@ struct HIDMonitorCallbacks
 //-----------------------------------------------------------------------------
 // Section: Class
 //-----------------------------------------------------------------------------
+class AMFITRACK_HID
+{
+  public:
+	uint8_t deviceId;
+	char name[MAX_NAME_LENGTH];
+	uint32_t uuid[3];
+
+	hid_device *_dev_handle;
+};
+
 class HIDMonitor
 {
   public:
@@ -68,15 +78,7 @@ class HIDMonitor
 	void run();
 	bool shutdown();
 
-	// Your customer accesses devices through these
-	std::vector<AMFITRACK_Sensor> &sensors()
-	{
-		return _sensors;
-	}
-	std::vector<AMFITRACK_Source> &sources()
-	{
-		return _sources;
-	}
+	void set_hid_device(uint8_t deviceID, hid_device *handle);
 
   private:
 	void syncDevices();
@@ -84,8 +86,8 @@ class HIDMonitor
 	void removeDisconnected();
 
 	// Separate probe per type since they have different fields to fill
-	bool probeSensorIdentity(AMFITRACK_Sensor &sensor);
-	bool probeSourceIdentity(AMFITRACK_Source &source);
+	bool probeSensorIdentity(AMFITRACK_HID &sensor);
+	bool probeSourceIdentity(AMFITRACK_HID &source);
 
 	void drainTxQueue();
 	void drainRx();
@@ -100,9 +102,6 @@ class HIDMonitor
 
 	bool _initialized = false;
 	std::chrono::steady_clock::time_point _lastScanTime{};
-
-	std::vector<AMFITRACK_Sensor> _sensors;
-	std::vector<AMFITRACK_Source> _sources;
 
 #ifdef USE_THREAD_BASED
 	mutable std::mutex _mutex;
