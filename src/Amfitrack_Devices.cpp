@@ -215,6 +215,29 @@ bool AMFITRACK_Devices::set(uint8_t device_id, uint8_t hubId)
 	return true;
 }
 
+bool AMFITRACK_Devices::set_hid(uint8_t device_id, hid_device *hidHandle, bool sensor)
+{
+	if (!is_valid_device_id(device_id))
+	{
+		return false;
+	}
+
+#ifdef USE_THREAD_BASED
+	const std::lock_guard<std::mutex> lock(_mutex);
+#endif
+
+	if (sensor)
+	{
+		_sensors[device_id]._dev_handle = hidHandle;
+	}
+	else
+	{
+		_sources[device_id]._dev_handle = hidHandle;
+	}
+
+	return true;
+}
+
 bool AMFITRACK_Devices::set(uint8_t device_id, Pose_t const &pose)
 {
 	if (!is_valid_device_id(device_id))
@@ -345,6 +368,11 @@ void AMFITRACK_Devices::setup_device_slots()
 void AMFITRACK_Devices::update_last_seen(uint8_t device_id, bool sensor, bool source)
 {
 	const uint32_t now = get_time_ms();
+
+	if (_sensors[device_id].active != true && _sources[device_id].active != true)
+	{
+		LOG_I("Device %u connected!", device_id);
+	}
 
 	if (sensor)
 	{

@@ -9,6 +9,7 @@
 #include "project_conf.h"
 
 #include "../AmfitrackDeviceTypes.h"
+#include "HID_Monitor.h"
 
 #include <cstdint>
 

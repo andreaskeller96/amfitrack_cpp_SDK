@@ -13,6 +13,7 @@
 #include "../Amfitrack.h"
 #include "../AmfitrackDeviceTypes.h"
 #include "Amfitrack_Devices.h"
+#include "../lib/lib_log/lib_log.h"
 //-----------------------------------------------------------------------------
 // Section: Define
 //-----------------------------------------------------------------------------

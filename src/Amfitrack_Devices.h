@@ -11,7 +11,6 @@
 #include "Amfitrack_Source.h"
 #include "project_conf.h"
 
-#include <array>
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
@@ -63,6 +62,7 @@ class AMFITRACK_Devices
 	bool set(uint8_t device_id, bool isActive);
 	bool set(uint8_t device_id, char const *name, uint8_t length);
 	bool set(uint8_t device_id, uint8_t hubId);
+	bool set_hid(uint8_t device_id, hid_device *hidHandle, bool sensor);
 
 	bool set(uint8_t device_id, Pose_t const &pose);
 	bool set(uint8_t device_id, IMU_t const &imu);
@@ -88,6 +88,6 @@ class AMFITRACK_Devices
 	mutable std::mutex _mutex;
 #endif
 
-	std::array<AMFITRACK_Sensor, AMFITRACK_DEVICE_COUNT> _sensors;
-	std::array<AMFITRACK_Source, AMFITRACK_DEVICE_COUNT> _sources;
+	AMFITRACK_Sensor _sensors[AMFITRACK_DEVICE_COUNT];
+	AMFITRACK_Source _sources[AMFITRACK_DEVICE_COUNT];
 };

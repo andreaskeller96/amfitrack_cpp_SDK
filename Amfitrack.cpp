@@ -15,6 +15,7 @@
 #include "lib/amfiprotapi/lib_AmfiProt_API.hpp"
 #include "lib/lib_log/lib_log.h"
 #include "src/Amfitrack_Devices.h"
+#include "src/Amfitrack_Source.h"
 #include "src/Amfitrack_task.h"
 #include "src/HID_Monitor.h"
 #include "src/project_conf.h"
@@ -89,8 +90,10 @@ void AMFITRACK::init()
 			amfiprot_api->set_transmit_ongoing_and_check_respons_request(queueIdx);
 		};
 
-		cb.rxPush = [](const uint8_t *data, size_t len)
+		cb.rxPush = [](uint8_t sourceAddress, const uint8_t *data, size_t len)
 		{
+			uint8_t _deviceID = data[4];
+			AMFITRACK_Devices::getInstance().set(_deviceID, sourceAddress);
 			amfiprot_api->deserialize_frame(data, static_cast<uint8_t>(len));
 		};
 

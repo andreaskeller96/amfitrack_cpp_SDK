@@ -44,7 +44,6 @@ static std::mutex keepAlivePingMutex;
 //-----------------------------------------------------------------------------
 void amfitrack_task::keepAlivePing()
 {
-
 	uint8_t payload = lib_AmfiProt_PayloadID_RequestDeviceID;
 	amfiprot_api->queue_frame(&payload, sizeof(payload), libAmfiProt_PayloadType_Common, lib_AmfiProt_packetType_NoAck, lib_AmfiProt_destination_Broadcast);
 }
