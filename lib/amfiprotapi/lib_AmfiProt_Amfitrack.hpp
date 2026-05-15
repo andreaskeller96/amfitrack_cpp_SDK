@@ -30,10 +30,6 @@
 #include <cmsis_compiler.h>
 #endif
 
-#if defined(_WIN32) || defined(__linux__) || defined(__APPLE__)
-#include <chrono>
-#endif
-
 /// \endcond
 
 //-----------------------------------------------------------------------------
@@ -140,6 +136,11 @@ typedef uint32_t lib_AmfiProt_Amfitrack_FrameID_t;
 // -------------------------------------------------
 //  Structures shared between multiple packet types
 // -------------------------------------------------
+
+#ifdef _MSC_VER
+#pragma pack(push, 1)
+#define LIB_AMFIPROT_AMFITRACK_PACKED_PUSHED
+#endif
 
 typedef __PACKED_STRUCT
 {
@@ -424,6 +425,11 @@ typedef __PACKED_STRUCT
 lib_AmfiProt_Amfitrack_SourceCoilCalData_t;
 static_assert(sizeof(lib_AmfiProt_Amfitrack_SourceCoilCalData_t) <= AmfiProtMaxPayloadLength, "lib_AmfiProt_Amfitrack_SourceCoilCalData_t larger than max payload size");
 
+#ifdef LIB_AMFIPROT_AMFITRACK_PACKED_PUSHED
+#pragma pack(pop)
+#undef LIB_AMFIPROT_AMFITRACK_PACKED_PUSHED
+#endif
+
 //-----------------------------------------------------------------------------
 // Functions
 //-----------------------------------------------------------------------------
@@ -482,16 +488,6 @@ class lib_AmfiProt_AmfiTrack
 	virtual void lib_AmfiProt_Amfitrack_handle_SetPhaseModulation(void *handle, lib_AmfiProt_Frame_t *frame, void *routing_handle) = 0;
 	virtual void lib_AmfiProt_Amfitrack_handle_SourceCoilCalData(void *handle, lib_AmfiProt_Frame_t *frame, void *routing_handle) = 0;
 	virtual void lib_AmfiProt_Amfitrack_handle_AlternativeProcessing(void *handle, lib_AmfiProt_Frame_t *frame, void *routing_handle) = 0;
-#if defined(_WIN32) || defined(__linux__) || defined(__APPLE__)
-	void lib_AmfiProt_Amfitrack_processFrame(void *handle, lib_AmfiProt_Frame_t *frame, std::chrono::steady_clock::time_point time_stamp, void *routing_handle);
-	virtual void lib_AmfiProt_Amfitrack_handle_SensorMeasurement(void *handle, lib_AmfiProt_Frame_t *frame, std::chrono::steady_clock::time_point time_stamp, void *routing_handle)
-	{
-		(void)handle;
-		(void)frame;
-		(void)time_stamp;
-		(void)routing_handle;
-	};
-#endif
 };
 
 //-----------------------------------------------------------------------------

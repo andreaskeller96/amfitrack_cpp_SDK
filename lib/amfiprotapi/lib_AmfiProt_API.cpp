@@ -43,9 +43,6 @@ AmfiProt_API::AmfiProt_API()
 {
 	libQueue_Init(&incomingBulkPointer, sizeof(incomingBulkData) / sizeof(incomingBulkData[0]));
 	libQueue_Init(&outgoingBulkPointer, sizeof(outgoingBulkData) / sizeof(outgoingBulkData[0]));
-#if defined(_WIN32) || defined(__linux__) || defined(__APPLE__)
-	libQueue_Init(&incomingBulkPointer, sizeof(incomingBulkDat_timestamps) / sizeof(incomingBulkDat_timestamps[0]));
-#endif
 }
 
 AmfiProt_API::~AmfiProt_API()
@@ -78,9 +75,6 @@ void AmfiProt_API::process_incoming_queue(void)
 	while (!libQueue_Empty(&(this->incomingBulkPointer)))
 	{
 		size_t idx = libQueue_Read(&(this->incomingBulkPointer));
-#if defined(_WIN32) || defined(__linux__) || defined(__APPLE__)
-		this->lib_AmfiProt_ProcessFrame(NULL, &(this->incomingBulkData[idx]), this->incomingBulkDat_timestamps[idx], NULL);
-#endif
 		this->lib_AmfiProt_ProcessFrame(NULL, &(this->incomingBulkData[idx]), NULL);
 
 		libQueue_Remove(&(this->incomingBulkPointer));
@@ -125,29 +119,6 @@ bool AmfiProt_API::queue_frame(void const *payload, uint8_t length, uint8_t payl
 
 	return isOk;
 }
-
-#if defined(_WIN32) || defined(__linux__) || defined(__APPLE__)
-bool AmfiProt_API::deserialize_frame(void const *pData, uint8_t length, std::chrono::steady_clock::time_point time_stamp)
-{
-	bool isOk = false;
-	lib_AmfiProt_Frame_t frame;
-	if (lib_AmfiProt_DeserializeFrame(&frame, pData, length))
-	{
-		if (!libQueue_Full(&incomingBulkPointer))
-		{
-			memcpy(&(incomingBulkData[libQueue_Write(&incomingBulkPointer)]), &frame, sizeof(frame));
-			incomingBulkDat_timestamps[libQueue_Write(&incomingBulkPointer)] = time_stamp;
-			libQueue_Add(&(incomingBulkPointer));
-			isOk = true;
-		}
-		else
-		{
-			LOG_W("Queue full");
-		}
-	}
-	return isOk;
-}
-#endif
 
 bool AmfiProt_API::deserialize_frame(void const *pData, uint8_t length)
 {
@@ -267,12 +238,6 @@ void AmfiProt_API::libAmfiProt_handle_ReplyInvalidRequest(void *handle, lib_Amfi
 	(void)routing_handle;
 	LOG_D("TxUID: %u | Invalid request: %u", frame->header.source, frame->header.payloadType);
 }
-#if defined(_WIN32) || defined(__linux__) || defined(__APPLE__)
-void AmfiProt_API::libAmfiProt_handle_AlternativeProcessing(void *handle, lib_AmfiProt_Frame_t *frame, std::chrono::steady_clock::time_point time_stamp, void *routing_handle)
-{
-	this->lib_AmfiProt_Amfitrack_processFrame(handle, frame, time_stamp, routing_handle);
-}
-#endif
 
 void AmfiProt_API::libAmfiProt_handle_AlternativeProcessing(void *handle, lib_AmfiProt_Frame_t *frame, void *routing_handle)
 {

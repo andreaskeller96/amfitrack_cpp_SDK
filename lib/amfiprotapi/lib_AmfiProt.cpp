@@ -724,13 +724,3 @@ void lib_AmfiProt::lib_AmfiProt_ProcessFrame(void *handle, lib_AmfiProt_Frame_t 
 		}
 	}
 }
-
-#if defined(_WIN32) || defined(__linux__) || defined(__APPLE__)
-#include <iostream>
-#include <chrono>
-void lib_AmfiProt::lib_AmfiProt_ProcessFrame(void *handle, lib_AmfiProt_Frame_t *frame, std::chrono::steady_clock::time_point time_stamp, void *routing_handle)
-{
-	// ONLY partiacially implemented
-	this->libAmfiProt_handle_AlternativeProcessing(handle, frame, time_stamp, routing_handle);
-}
-#endif

@@ -19,7 +19,8 @@
 #define __PACKED_STRUCT_GENERIC struct
 #define __weak
 #define __packed
-#pragma pack(1)
+#pragma pack(push, 1)
+#define LIB_GENERIC_PARAMETER_PACKED_PUSHED
 #elif defined(__MINGW32__) || defined(__MINGW64__)
 #define __PACKED_STRUCT_GENERIC struct __attribute__((packed))
 #define __weak
@@ -131,6 +132,11 @@ extern "C"
 
 #ifdef __cplusplus
 } // extern "C" end
+#endif
+
+#ifdef LIB_GENERIC_PARAMETER_PACKED_PUSHED
+#pragma pack(pop)
+#undef LIB_GENERIC_PARAMETER_PACKED_PUSHED
 #endif
 
 #endif

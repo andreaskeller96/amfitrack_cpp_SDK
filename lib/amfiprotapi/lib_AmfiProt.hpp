@@ -13,15 +13,12 @@
 #include <assert.h>
 #include <stdio.h>
 
-#if defined(_WIN32) || defined(__linux__) || defined(__APPLE__)
-#include <chrono>
-#endif
-
 #ifdef _MSC_VER
 #define __PACKED_STRUCT struct
 #define __weak
 #define __PACKED
-#pragma pack(1)
+#pragma pack(push, 1)
+#define LIB_AMFIPROT_PACKED_PUSHED
 #elif defined(__MINGW32__) || defined(__MINGW64__)
 #define __PACKED_STRUCT struct __attribute__((packed))
 #define __weak
@@ -265,10 +262,6 @@ class lib_AmfiProt
 	virtual void libAmfiProt_handle_ReplyFailure(void *handle, lib_AmfiProt_Frame_t *frame, void *routing_handle) = 0;
 	virtual void libAmfiProt_handle_ReplyInvalidRequest(void *handle, lib_AmfiProt_Frame_t *frame, void *routing_handle) = 0;
 
-#if defined(_WIN32) || defined(__linux__) || defined(__APPLE__)
-	void lib_AmfiProt_ProcessFrame(void *handle, lib_AmfiProt_Frame_t *frame, std::chrono::steady_clock::time_point time_stamp, void *routing_handle);
-	virtual void libAmfiProt_handle_AlternativeProcessing(void *handle, lib_AmfiProt_Frame_t *frame, std::chrono::steady_clock::time_point time_stamp, void *routing_handle) = 0;
-#endif
   private:
 	uint8_t deviceID;
 };
@@ -585,5 +578,10 @@ __PACKED_STRUCT lib_AmfiProt_TunnelData
 }
 __packed;
 static_assert(sizeof(struct lib_AmfiProt_TunnelData) <= AmfiProtMaxPayloadLength, "lib_AmfiProt_TunnelData larger than max payload size");
+
+#ifdef LIB_AMFIPROT_PACKED_PUSHED
+#pragma pack(pop)
+#undef LIB_AMFIPROT_PACKED_PUSHED
+#endif
 
 #endif // LIB_AMFIPROT_H_H
