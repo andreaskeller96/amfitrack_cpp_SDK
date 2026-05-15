@@ -6,6 +6,7 @@
 #ifdef USE_THREAD_BASED
 #include <iostream>
 #include <thread>
+#include <iomanip>
 #endif
 // #define AMFITRACK_DEBUG_INFO
 
@@ -20,6 +21,7 @@ AMFITRACK::AMFITRACK()
     {
         memset(Name[i], 0, MAX_NAME_LENGTH);
         DeviceActive[i] = false;
+        DeviceTypes[i] = DeviceType::Unknown;
         Position[i].position_x_in_m = 0;
         Position[i].position_y_in_m = 0;
         Position[i].position_z_in_m = 0;
@@ -262,12 +264,57 @@ void AMFITRACK::getSensorMeasurements(uint8_t DeviceID, lib_AmfiProt_Amfitrack_S
     memcpy(SensorMeasurement, &SensorMeasurements[DeviceID], sizeof(lib_AmfiProt_Amfitrack_Sensor_Measurement_t));
 }
 
+void AMFITRACK::setDeviceUUID(uint8_t DeviceID, uint32_t UUID[3])
+{
+#ifdef USE_THREAD_BASED
+    const std::lock_guard<std::mutex> lock(mutUUID);
+#endif // USE_THREAD_BASED
+    std::ostringstream uuid_stream;
+    uuid_stream << std::hex << std::uppercase << std::setfill('0');
+    uuid_stream << std::setw(8) << UUID[0];
+    uuid_stream << std::setw(8) << UUID[1];
+    uuid_stream << std::setw(8) << UUID[2];
+    std::string uuid_string = uuid_stream.str();
+    for (uint8_t i = 0; i < 24; i++)
+    {
+        DeviceUUID[DeviceID][i] = uuid_string[i];
+    }
+    DeviceUUID[DeviceID][24] = '\0';
+}
+
+void AMFITRACK::getDeviceUUID(uint8_t DeviceID, char *UUID)
+{
+    if (!getDeviceActive(DeviceID))
+        return;
+#ifdef USE_THREAD_BASED
+    const std::lock_guard<std::mutex> lock(mutUUID);
+#endif // USE_THREAD_BASED
+    memcpy(UUID, DeviceUUID[DeviceID], UUID_LENGTH + 1);
+}
+
+void AMFITRACK::setDeviceType(uint8_t DeviceID, DeviceType type)
+{
+#ifdef USE_THREAD_BASED
+    const std::lock_guard<std::mutex> lock(mutDeviceActive);
+#endif // USE_THREAD_BASED
+    DeviceTypes[DeviceID] = type;
+}
+
+AMFITRACK::DeviceType AMFITRACK::getDeviceType(uint8_t DeviceID)
+{
+#ifdef USE_THREAD_BASED
+    const std::lock_guard<std::mutex> lock(mutDeviceActive);
+#endif // USE_THREAD_BASED
+    return DeviceTypes[DeviceID];
+}
+
 void AmfiProt_API::lib_AmfiProt_Amfitrack_handle_SourceCalibration(void *handle, lib_AmfiProt_Frame_t *frame, void *routing_handle)
 {
     (void)handle;
     (void)routing_handle;
     AMFITRACK &AMFITRACK = AMFITRACK::getInstance();
     AMFITRACK.setDeviceActive(frame->header.source);
+    AMFITRACK.setDeviceType(frame->header.source, AMFITRACK::DeviceType::Source);
 }
 
 void AmfiProt_API::lib_AmfiProt_Amfitrack_handle_SourceMeasurement(void *handle, lib_AmfiProt_Frame_t *frame, void *routing_handle)
@@ -276,6 +323,7 @@ void AmfiProt_API::lib_AmfiProt_Amfitrack_handle_SourceMeasurement(void *handle,
     (void)routing_handle;
     AMFITRACK &AMFITRACK = AMFITRACK::getInstance();
     AMFITRACK.setDeviceActive(frame->header.source);
+    AMFITRACK.setDeviceType(frame->header.source, AMFITRACK::DeviceType::Source);
 }
 
 void AmfiProt_API::lib_AmfiProt_Amfitrack_handle_SensorMeasurement(void *handle, lib_AmfiProt_Frame_t *frame, void *routing_handle)
@@ -293,6 +341,7 @@ void AmfiProt_API::lib_AmfiProt_Amfitrack_handle_SensorMeasurement(void *handle,
     AMFITRACK.setDeviceIMU(frame->header.source, tempIMU);
     AMFITRACK.setSensorMeasurements(frame->header.source, SensorMeasurement);
     AMFITRACK.setDeviceActive(frame->header.source);
+    AMFITRACK.setDeviceType(frame->header.source, AMFITRACK::DeviceType::Sensor);
 }
 
 void AmfiProt_API::lib_AmfiProt_Amfitrack_handle_RawBfield(void *handle, lib_AmfiProt_Frame_t *frame, void *routing_handle)
@@ -421,6 +470,11 @@ void AmfiProt_API::libAmfiProt_handle_RespondDeviceID(void *handle, lib_AmfiProt
     (void)routing_handle;
     AMFITRACK &AMFITRACK = AMFITRACK::getInstance();
     AMFITRACK.setDeviceActive(frame->header.source);
+    lib_AmfiProt_DeviceID payload;
+    memcpy(&payload, &frame->payload[0], sizeof(lib_AmfiProt_DeviceID));
+    uint32_t UUID[3]{ 0,0,0 };
+    memcpy(&UUID, &payload.UUID, sizeof(uint32_t) * 3);
+    AMFITRACK.setDeviceUUID(frame->header.source, UUID);
 }
 
 void AmfiProt_API::libAmfiProt_handle_SetTxID(void *handle, lib_AmfiProt_Frame_t *frame, void *routing_handle)

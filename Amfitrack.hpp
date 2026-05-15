@@ -36,6 +36,7 @@ namespace AMFITRACK_API
 //-----------------------------------------------------------------------------
 #define MAX_NAME_LENGTH 64
 #define MAX_NUMBER_OF_DEVICES 254
+#define UUID_LENGTH 24
 
 //-----------------------------------------------------------------------------
 // Type declarations
@@ -51,6 +52,7 @@ namespace AMFITRACK_API
 class AMFITRACK
 {
 public:
+    enum class DeviceType : uint8_t { Unknown, Source, Sensor };
     static AMFITRACK &getInstance()
     {
         static AMFITRACK instance;
@@ -91,11 +93,19 @@ public:
 
     void getSensorMeasurements(uint8_t DeviceID, lib_AmfiProt_Amfitrack_Sensor_Measurement_t *SensorMeasurement);
 
+    void setDeviceUUID(uint8_t DeviceID, uint32_t UUID[3]);
+    void getDeviceUUID(uint8_t DeviceID, char *UUID);
+
+    void setDeviceType(uint8_t DeviceID, DeviceType type);
+    DeviceType getDeviceType(uint8_t DeviceID);
+
+
 #if defined(_WIN32) || defined(__linux__) || defined(__APPLE__)
     void setSensorTimestamp(uint8_t DeviceID, std::chrono::steady_clock::time_point time_stamp);
 
     void getSensorTimestamp(uint8_t DeviceID, std::chrono::steady_clock::time_point *time_stamp);
 #endif
+
 
 private:
 #ifdef USE_THREAD_BASED
@@ -104,9 +114,17 @@ private:
     char Name[MAX_NUMBER_OF_DEVICES][MAX_NAME_LENGTH]; // Array of character arrays to store device names
 
 #ifdef USE_THREAD_BASED
+    std::mutex mutUUID;
+#endif
+    char DeviceUUID[MAX_NUMBER_OF_DEVICES][UUID_LENGTH+1];
+
+    
+
+#ifdef USE_THREAD_BASED
     std::mutex mutDeviceActive; // Protects array of DeviceActive bools
 #endif                          // USE_THREAD_BASED
     bool DeviceActive[MAX_NUMBER_OF_DEVICES];
+    DeviceType DeviceTypes[MAX_NUMBER_OF_DEVICES];
 
 #ifdef USE_ACTIVE_DEVICE_HANDLING
 #ifdef USE_THREAD_BASED
