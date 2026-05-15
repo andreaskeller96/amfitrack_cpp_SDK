@@ -31,14 +31,15 @@ target_include_directories(${CMAKE_LIBRARY_NAME} PUBLIC
 
 target_sources(${CMAKE_LIBRARY_NAME} PRIVATE
     Amfitrack.cpp
-    Amfitrack.hpp
-
-    Amfitrack_New.cpp
-    Amfitrack_New.h
+    Amfitrack.h
     AmfitrackDeviceTypes.h
 
     src/Amfitrack_Devices.cpp
     src/Amfitrack_Devices.h
+    src/Amfitrack_Sensor.cpp
+    src/Amfitrack_Sensor.h
+    src/Amfitrack_Source.cpp
+    src/Amfitrack_Source.h
     src/HID_Monitor.cpp
     src/HID_Monitor.h
     src/project_conf.h

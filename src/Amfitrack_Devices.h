@@ -1,95 +1,93 @@
 //-----------------------------------------------------------------------------
 //                              AMFITECH APS
 //                          ALL RIGHTS RESERVED
-//
-// D// $URL: $
-// $Rev: $
-// $Date: $
-// $Author: $
-//
-// Description
-// TODO Write a description here
-//
 //-----------------------------------------------------------------------------
 #pragma once
 
 //-----------------------------------------------------------------------------
-// Includes
+// Section: Includes
 //-----------------------------------------------------------------------------
-#include <string.h>
-#include <chrono>
-#include <stddef.h>
-#include <stdint.h>
-#include <stdbool.h>
+#include "Amfitrack_Sensor.h"
+#include "Amfitrack_Source.h"
 #include "project_conf.h"
-#include "lib_AmfiProt_API.hpp"
-#include "../AmfitrackDeviceTypes.h"
-#ifdef USE_USB
-#include "hidapi.h"
-#endif
+
+#include <array>
+#include <chrono>
+#include <cstddef>
+#include <cstdint>
+
 #ifdef USE_THREAD_BASED
 #include <mutex>
-#endif // USE_THREAD_BASED
-
-#define MAX_NAME_LENGTH 64
+#endif
+//-----------------------------------------------------------------------------
+// Section: Define
+//-----------------------------------------------------------------------------
+#ifndef MAX_NUMBER_OF_DEVICES
 #define MAX_NUMBER_OF_DEVICES 254
-
-class AMFITRACK_Sensor
-{
-  public:
-	AMFITRACK_Sensor();
-	explicit AMFITRACK_Sensor(uint8_t id);
-
-	void reset();
-
-  public:
-	uint8_t deviceId;
-	char name[MAX_NAME_LENGTH];
-	uint32_t uuid[3];
-	FW_t FW_Version;
-	RF_t RF_Version;
-	HW_t HW_Version;
-
-	bool active;
-
-	uint16_t calcId;
-
-	hid_device *_dev_handle;
-
-	Pose_t pose;
-	IMU_t imu;
-
-#if defined(_WIN32) || defined(__linux__) || defined(__APPLE__)
-	std::chrono::steady_clock::time_point sensorTimestamp;
 #endif
 
-	uint32_t lastTimeSeenMs;
-};
+#define AMFITRACK_DEVICE_COUNT 255U
+#define AMFITRACK_BROADCAST_DEVICE_ID 255U
+//-----------------------------------------------------------------------------
+// Section: Typedef
+//-----------------------------------------------------------------------------
 
-class AMFITRACK_Source
+//-----------------------------------------------------------------------------
+// Section: Macro
+//-----------------------------------------------------------------------------
+
+//-----------------------------------------------------------------------------
+// Section: Variables
+//-----------------------------------------------------------------------------
+
+//-----------------------------------------------------------------------------
+// Section: Class
+//-----------------------------------------------------------------------------
+
+class AMFITRACK_Devices
 {
   public:
-	AMFITRACK_Source();
-	explicit AMFITRACK_Source(uint8_t id);
+	static AMFITRACK_Devices &getInstance();
 
-	void reset();
+	void reset_devices();
+	bool reset_sensor(uint8_t device_id);
+	bool reset_source(uint8_t device_id);
 
-  public:
-	uint8_t deviceId;
-	char name[MAX_NAME_LENGTH];
-	uint32_t uuid[3];
-	FW_t FW_Version;
-	RF_t RF_Version;
-	HW_t HW_Version;
+	static std::size_t device_count();
+	static bool is_valid_device_id(uint8_t device_id);
+	static uint32_t get_time_ms();
 
-	bool active;
+	bool get_sensor(uint8_t device_id, AMFITRACK_Sensor *sensor) const;
+	bool get_source(uint8_t device_id, AMFITRACK_Source *source) const;
 
-	hid_device *_dev_handle;
+	bool set(uint8_t device_id, bool isActive);
+	bool set(uint8_t device_id, char const *name, uint8_t length);
+	bool set(uint8_t device_id, uint8_t hubId);
 
-	Current_t current;
-	Frequency_t frequency;
-	Voltage_t voltage;
-	Calibration_t calibration;
+	bool set(uint8_t device_id, Pose_t const &pose);
+	bool set(uint8_t device_id, IMU_t const &imu);
+	// Deprecated!
+	bool set(uint8_t device_id, lib_AmfiProt_Amfitrack_Sensor_Measurement_t const &sensorMeasurement);
 
-	uint32_t lastTimeSeenMs;
+	bool set(uint8_t device_id, Current_t const &current);
+	bool set(uint8_t device_id, Frequency_t const &frequency);
+	bool set(uint8_t device_id, Voltage_t const &voltage);
+	bool set(uint8_t device_id, Calibration_t const &calibration);
+
+  private:
+	AMFITRACK_Devices();
+	~AMFITRACK_Devices() = default;
+
+	AMFITRACK_Devices(AMFITRACK_Devices const &) = delete;
+	AMFITRACK_Devices &operator=(AMFITRACK_Devices const &) = delete;
+
+	void setup_device_slots();
+	void update_last_seen(uint8_t device_id, bool sensor, bool source);
+
+#ifdef USE_THREAD_BASED
+	mutable std::mutex _mutex;
+#endif
+
+	std::array<AMFITRACK_Sensor, AMFITRACK_DEVICE_COUNT> _sensors;
+	std::array<AMFITRACK_Source, AMFITRACK_DEVICE_COUNT> _sources;
 };

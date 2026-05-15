@@ -11,11 +11,11 @@
 //-----------------------------------------------------------------------------
 #include "Amfitrack_task.h"
 
-#include "../Amfitrack_New.h"
 #include "../lib/amfiprotapi/lib_AmfiProt_API.hpp"
 #include "Amfitrack_Devices.h"
 
 #include <chrono>
+#include <cstddef>
 #include <mutex>
 //-----------------------------------------------------------------------------
 // Section: Define
@@ -51,26 +51,26 @@ void amfitrack_task::keepAlivePing()
 
 void amfitrack_task::checkDisconnected()
 {
-#ifdef USE_ACTIVE_DEVICE_HANDLING
-	const uint32_t now = AMFITRACK_NEW::getInstance().get_time_ms();
+	AMFITRACK_Devices &devices = AMFITRACK_Devices::getInstance();
+	const uint32_t now = AMFITRACK_Devices::get_time_ms();
 
-	for (uint8_t device_id = 0; device_id < AMFITRACK_NEW_DEVICE_COUNT; device_id++)
+	for (std::size_t device_index = 0; device_index < AMFITRACK_Devices::device_count(); device_index++)
 	{
+		const auto device_id = static_cast<uint8_t>(device_index);
 		AMFITRACK_Sensor _sensor;
-		AMFITRACK_NEW::getInstance().get_sensor(device_id, &_sensor);
+		devices.get_sensor(device_id, &_sensor);
 		if (_sensor.active && ((now - _sensor.lastTimeSeenMs) > DISCONNECT_TIMEOUT))
 		{
-			AMFITRACK_NEW::getInstance().set(device_id, false);
+			devices.set(device_id, false);
 		}
 
 		AMFITRACK_Source _source;
-		AMFITRACK_NEW::getInstance().get_source(device_id, &_source);
+		devices.get_source(device_id, &_source);
 		if (_source.active && ((now - _source.lastTimeSeenMs) > DISCONNECT_TIMEOUT))
 		{
-			AMFITRACK_NEW::getInstance().set(device_id, false);
+			devices.set(device_id, false);
 		}
 	}
-#endif
 }
 
 void amfitrack_task::init()

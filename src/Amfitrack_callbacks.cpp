@@ -10,9 +10,9 @@
 // Section: Includes
 //-----------------------------------------------------------------------------
 #include "../lib/amfiprotapi/lib_AmfiProt_API.hpp"
-#include "../Amfitrack.hpp"
-#include "../Amfitrack_New.h"
+#include "../Amfitrack.h"
 #include "../AmfitrackDeviceTypes.h"
+#include "Amfitrack_Devices.h"
 //-----------------------------------------------------------------------------
 // Section: Define
 //-----------------------------------------------------------------------------
@@ -35,8 +35,6 @@ void AmfiProt_API::lib_AmfiProt_Amfitrack_handle_SourceCalibration(void *handle,
 {
 	(void)handle;
 	(void)routing_handle;
-	AMFITRACK &AMFITRACK = AMFITRACK::getInstance();
-	AMFITRACK.setDeviceActive(frame->header.source);
 	lib_AmfiProt_Amfitrack_Source_Calibration_t sourceCalibration;
 	memcpy(&sourceCalibration, &frame->payload[0], sizeof(lib_AmfiProt_Amfitrack_Source_Calibration_t));
 
@@ -51,17 +49,14 @@ void AmfiProt_API::lib_AmfiProt_Amfitrack_handle_SourceCalibration(void *handle,
 	cal.Calibration_Y = sourceCalibration.calibration_source_coil_y;
 	cal.Calibration_Z = sourceCalibration.calibration_source_coil_z;
 
-	AMFITRACK_NEW::getInstance().set(_deviceID, freq);
-	AMFITRACK_NEW::getInstance().set(_deviceID, cal);
+	AMFITRACK_Devices::getInstance().set(_deviceID, freq);
+	AMFITRACK_Devices::getInstance().set(_deviceID, cal);
 }
 
 void AmfiProt_API::lib_AmfiProt_Amfitrack_handle_SourceMeasurement(void *handle, lib_AmfiProt_Frame_t *frame, void *routing_handle)
 {
 	(void)handle;
 	(void)routing_handle;
-	AMFITRACK &AMFITRACK = AMFITRACK::getInstance();
-	AMFITRACK.setDeviceActive(frame->header.source);
-
 	lib_AmfiProt_Amfitrack_Source_Measurement_t sourceMeasurement;
 	memcpy(&sourceMeasurement, &frame->payload[0], sizeof(lib_AmfiProt_Amfitrack_Source_Measurement_t));
 
@@ -77,8 +72,8 @@ void AmfiProt_API::lib_AmfiProt_Amfitrack_handle_SourceMeasurement(void *handle,
 	vol.Voltage_Z = sourceMeasurement.voltage_coil_z_in_V;
 	vol.Voltage_Boost = sourceMeasurement.voltage_boost_in_V;
 
-	AMFITRACK_NEW::getInstance().set(_deviceID, cur);
-	AMFITRACK_NEW::getInstance().set(_deviceID, vol);
+	AMFITRACK_Devices::getInstance().set(_deviceID, cur);
+	AMFITRACK_Devices::getInstance().set(_deviceID, vol);
 }
 
 void AmfiProt_API::lib_AmfiProt_Amfitrack_handle_SensorMeasurement(void *handle, lib_AmfiProt_Frame_t *frame, void *routing_handle)
@@ -88,19 +83,14 @@ void AmfiProt_API::lib_AmfiProt_Amfitrack_handle_SensorMeasurement(void *handle,
 	uint8_t _deviceID = frame->header.source;
 
 	lib_AmfiProt_Amfitrack_Sensor_Measurement_t SensorMeasurement;
-	AMFITRACK &AMFITRACK = AMFITRACK::getInstance();
 	memcpy(&SensorMeasurement, &frame->payload[0], sizeof(lib_AmfiProt_Amfitrack_Sensor_Measurement_t));
 	lib_AmfiProt_Amfitrack_Pose_t tempPose;
 	lib_AmfiProt_Amfitrack_decode_pose_i24(&SensorMeasurement.pose, &tempPose);
-	AMFITRACK.setDevicePose(_deviceID, tempPose);
 	lib_AmfiProt_Amfitrack_IMU_t tempIMU;
 	lib_AmfiProt_Amfitrack_decodeIMU_i16(&SensorMeasurement.imu_data, &tempIMU);
-	AMFITRACK.setDeviceIMU(_deviceID, tempIMU);
-	AMFITRACK.setSensorMeasurements(_deviceID, SensorMeasurement);
-	AMFITRACK.setDeviceActive(_deviceID);
 
 	Pose_t pose = { tempPose.position_x_in_m, tempPose.position_y_in_m, tempPose.position_z_in_m, tempPose.orientation_x, tempPose.orientation_y, tempPose.orientation_z, tempPose.orientation_w };
-	AMFITRACK_NEW::getInstance().set(_deviceID, pose);
+	AMFITRACK_Devices::getInstance().set(_deviceID, pose);
 	IMU_t imu;
 	imu.Acceleration_X = tempIMU.acceleration_x_in_mg * 1000;
 	imu.Acceleration_Y = tempIMU.acceleration_y_in_mg * 1000;
@@ -108,7 +98,7 @@ void AmfiProt_API::lib_AmfiProt_Amfitrack_handle_SensorMeasurement(void *handle,
 	imu.Rotation_X = tempIMU.rotation_x_in_rad_per_sec;
 	imu.Rotation_Y = tempIMU.rotation_y_in_rad_per_sec;
 	imu.Rotation_Z = tempIMU.rotation_z_in_rad_per_sec;
-	AMFITRACK_NEW::getInstance().set(_deviceID, imu);
+	AMFITRACK_Devices::getInstance().set(_deviceID, imu);
 }
 
 void AmfiProt_API::lib_AmfiProt_Amfitrack_handle_RawBfield(void *handle, lib_AmfiProt_Frame_t *frame, void *routing_handle)
@@ -237,10 +227,7 @@ void AmfiProt_API::libAmfiProt_handle_RespondDeviceID(void *handle, lib_AmfiProt
 	(void)routing_handle;
 	uint8_t _deviceID = frame->header.source;
 
-	AMFITRACK &AMFITRACK = AMFITRACK::getInstance();
-	AMFITRACK.setDeviceActive(_deviceID);
-
-	AMFITRACK_NEW::getInstance().set(_deviceID, true);
+	AMFITRACK_Devices::getInstance().set(_deviceID, true);
 }
 
 void AmfiProt_API::libAmfiProt_handle_SetTxID(void *handle, lib_AmfiProt_Frame_t *frame, void *routing_handle)
@@ -303,11 +290,10 @@ void AmfiProt_API::libAmfiProt_handle_ReplyDeviceName(void *handle, lib_AmfiProt
 {
 	(void)handle;
 	(void)routing_handle;
-	AMFITRACK &AMFITRACK = AMFITRACK::getInstance();
+	uint8_t _deviceID = frame->header.source;
 	size_t str_length = strnlen((char *)(&(frame->payload[1])), MAX_PAYLOAD_SIZE - 1);
-	AMFITRACK.setDeviceName(frame->header.source, (char *)(&(frame->payload[1])), (uint8_t)str_length);
 
-	AMFITRACK_NEW::getInstance().set(frame->header.source, (char *)(&(frame->payload[1])), (uint8_t)str_length);
+	AMFITRACK_Devices::getInstance().set(_deviceID, (char *)(&(frame->payload[1])), (uint8_t)str_length);
 }
 
 void AmfiProt_API::libAmfiProt_handle_RequestConfigurationValue(void *handle, lib_AmfiProt_Frame_t *frame, void *routing_handle)
@@ -484,11 +470,4 @@ void AmfiProt_API::libAmfiProt_handle_RequestFirmwareVersionPerID(void *handle, 
 	(void)frame;
 	(void)routing_handle;
 	/* NOTE: Overwrite in application-specific library */
-}
-
-void AmfiProt_API::lib_AmfiProt_Amfitrack_handle_SensorMeasurement(void *handle, lib_AmfiProt_Frame_t *frame, std::chrono::steady_clock::time_point time_stamp, void *routing_handle)
-{
-	AMFITRACK &AMFITRACK = AMFITRACK::getInstance();
-	AMFITRACK.setSensorTimestamp(frame->header.source, time_stamp);
-	AmfiProt_API::lib_AmfiProt_Amfitrack_handle_SensorMeasurement(handle, frame, routing_handle);
 }

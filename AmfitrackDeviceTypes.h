@@ -42,7 +42,7 @@ typedef struct
 //-----------------------------------------------------------------------------
 typedef struct
 {
-	float Position_X;
+	float Position_X; // in meter
 	float Position_Y;
 	float Position_Z;
 	float Orientation_X;
