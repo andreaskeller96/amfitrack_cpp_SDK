@@ -13,6 +13,7 @@
 // Includes
 //-----------------------------------------------------------------------------
 /// \cond
+#include <cstring>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
@@ -465,7 +466,10 @@ void lib_AmfiProt::lib_AmfiProt_ProcessFrame(void *handle, lib_AmfiProt_Frame_t 
 					break;
 					case lib_AmfiProt_PayloadID_ReplyConfigurationValueUID:
 					{
-						if (frame->header.length == sizeof(lib_AmfiProt_ConfigValue_t))
+						lib_AmfiProt_ConfigValueUID config;
+						memcpy(&config, frame->payload, frame->header.length);
+						uint8_t size = sizeof(config) - sizeof(config.value) + lib_Generic_Parameter_SizeWithType(config.value);
+						if (frame->header.length == size)
 						{
 							this->libAmfiProt_handle_ConfigurationValueUID(handle, frame, routing_handle);
 						}

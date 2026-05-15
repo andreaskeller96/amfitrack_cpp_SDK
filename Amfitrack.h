@@ -53,6 +53,7 @@ class AMFITRACK
 	bool reset_sensor(uint8_t device_id);
 	bool reset_source(uint8_t device_id);
 
+	void set_configuration(uint8_t DeviceID, uint32_t UID, lib_Generic_Parameter_Value_t parameter);
 	//-----------------------------------------------------------------------------
 	// Old function will be deprecated
 	//-----------------------------------------------------------------------------
