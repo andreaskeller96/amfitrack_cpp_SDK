@@ -14,7 +14,7 @@ set_target_properties(${CMAKE_LIBRARY_NAME} PROPERTIES
 )
 
 # Ensure HIDAPI is included in build
-set(HIDAPI_PATH "${CMAKE_CURRENT_SOURCE_DIR}/lib/hidapi")
+set(HIDAPI_PATH "${CMAKE_CURRENT_SOURCE_DIR}/drv/drv_USB/hidapi")
 
 target_include_directories(${CMAKE_LIBRARY_NAME} PUBLIC 
     ${CMAKE_CURRENT_SOURCE_DIR}
@@ -26,6 +26,8 @@ target_include_directories(${CMAKE_LIBRARY_NAME} PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/lib/lib_macro
     ${CMAKE_CURRENT_SOURCE_DIR}/lib/lib_queue
     ${CMAKE_CURRENT_SOURCE_DIR}/lib/lib_log
+
+    ${CMAKE_CURRENT_SOURCE_DIR}/drv/drv_USB
 
     ${HIDAPI_PATH}/hidapi
 )
@@ -41,9 +43,10 @@ target_sources(${CMAKE_LIBRARY_NAME} PRIVATE
     src/Amfitrack_Sensor.h
     src/Amfitrack_Source.cpp
     src/Amfitrack_Source.h
-    src/HID_Monitor.cpp
-    src/HID_Monitor.h
-
+    src/Amfitrack_task.cpp
+    src/Amfitrack_task.h
+    src/Amfitrack_config.cpp
+    src/Amfitrack_config.h
     src/Amfitrack_callbacks.cpp
     src/Amfitrack_callbacks.h
 
@@ -68,10 +71,9 @@ target_sources(${CMAKE_LIBRARY_NAME} PRIVATE
     lib/lib_log/lib_log.cpp
     lib/lib_log/lib_log.h
 
-    src/Amfitrack_task.cpp
-    src/Amfitrack_task.h
-    src/Amfitrack_config.cpp
-    src/Amfitrack_config.h
+
+    drv/drv_USB/HID_Monitor.cpp
+    drv/drv_USB/HID_Monitor.h
 )
 
 # ===== Amfitrack feature options =====

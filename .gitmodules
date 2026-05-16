@@ -1,3 +1,6 @@
 [submodule "lib/hidapi"]
-	path = lib/hidapi
+	path = drv/drv_USB/hidapi
+	url = https://github.com/libusb/hidapi.git
+[submodule "drv/drv_USB/hidapi"]
+	path = drv/drv_USB/hidapi
 	url = https://github.com/libusb/hidapi.git
