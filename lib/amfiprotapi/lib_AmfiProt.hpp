@@ -206,13 +206,13 @@ class lib_AmfiProt
 	lib_AmfiProt();
 	~lib_AmfiProt();
 
-	bool lib_AmfiProt_Init(lib_AmfiProt_Handle_t *handle, uint8_t deviceID);
+	bool lib_AmfiProt_Init(lib_AmfiProt_Handle_t *handle, uint8_t _deviceID);
 	bool lib_AmfiProt_UpdateCRC(lib_AmfiProt_Frame_t *frame);
 	bool lib_AmfiProt_EncodeFrame(lib_AmfiProt_Frame_t *frame, void const *pPayload, uint8_t length, uint8_t payloadType, uint8_t packetNumber, uint8_t destination, lib_AmfiProt_packetType_t packetType);
 	bool lib_AmfiProt_EncodeAck(lib_AmfiProt_Frame_t *incomingFrame, lib_AmfiProt_Frame_t *outgoingFrame);
 	bool lib_AmfiProt_DeserializeFrame(lib_AmfiProt_Frame_t *frame, void const *pData, uint8_t length);
 	uint8_t lib_AmfiProt_FrameSize(lib_AmfiProt_Frame_t const *frame);
-	void lib_AmfiProt_SetDeviceID(uint8_t deviceID);
+	void lib_AmfiProt_SetDeviceID(uint8_t _deviceID);
 
 	void lib_AmfiProt_ProcessFrame(void *handle, lib_AmfiProt_Frame_t *frame, void *routing_handle);
 

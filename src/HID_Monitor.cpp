@@ -291,7 +291,7 @@ void HIDMonitor::scanForPid(uint16_t pid)
 			}
 			AMFITRACK_Devices::getInstance().set(sensor.deviceId, true);
 			AMFITRACK_Devices::getInstance().set_hid(sensor.deviceId, sensor._dev_handle, true);
-			LOG_I("Sensor connected: id=%u name=%s", sensor.deviceId, sensor.name);
+			LOG_I("Sensor connected on USB: id=%u name=%s", sensor.deviceId, sensor.name);
 		}
 		else
 		{
@@ -304,7 +304,7 @@ void HIDMonitor::scanForPid(uint16_t pid)
 			}
 			AMFITRACK_Devices::getInstance().set(source.deviceId, true);
 			AMFITRACK_Devices::getInstance().set_hid(source.deviceId, source._dev_handle, false);
-			LOG_I("Source connected: id=%u name=%s", source.deviceId, source.name);
+			LOG_I("Source connected on USB: id=%u name=%s", source.deviceId, source.name);
 		}
 	}
 	hid_free_enumeration(list);
@@ -339,7 +339,7 @@ void HIDMonitor::removeDisconnected()
 
 		if (sensorDisconnected)
 		{
-			LOG_I("Sensor disconnected: id=%u name=%s", sensor.deviceId, sensor.name);
+			LOG_I("Sensor disconnected on USB: id=%u name=%s", sensor.deviceId, sensor.name);
 			if (sensor._dev_handle)
 			{
 				hid_close(sensor._dev_handle);
@@ -349,7 +349,7 @@ void HIDMonitor::removeDisconnected()
 		}
 		if (sourceDisconnected)
 		{
-			LOG_I("Source disconnected: id=%u name=%s", source.deviceId, source.name);
+			LOG_I("Source disconnected on USB: id=%u name=%s", source.deviceId, source.name);
 			if (source._dev_handle)
 			{
 				hid_close(source._dev_handle);

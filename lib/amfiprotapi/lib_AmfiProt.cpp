@@ -94,7 +94,7 @@ bool lib_AmfiProt::lib_AmfiProt_EncodeFrame(lib_AmfiProt_Frame_t *frame, void co
 		frame->header.destination = destination;
 		frame->header.packetNumber = packetNumber;
 		frame->header.payloadType = payloadType;
-		frame->header.packetType = packetType;
+		frame->header.packetType = (uint8_t)packetType;
 
 		if (frame->header.length > 0)
 		{
@@ -194,16 +194,16 @@ uint8_t lib_AmfiProt::lib_AmfiProt_FrameSize(lib_AmfiProt_Frame_t const *frame)
 	return frameSize;
 }
 
-void lib_AmfiProt::lib_AmfiProt_SetDeviceID(uint8_t deviceID)
+void lib_AmfiProt::lib_AmfiProt_SetDeviceID(uint8_t _deviceID)
 {
-	this->deviceID = deviceID;
+	this->deviceID = _deviceID;
 }
 
-bool lib_AmfiProt::lib_AmfiProt_Init(lib_AmfiProt_Handle_t *handle, uint8_t deviceID)
+bool lib_AmfiProt::lib_AmfiProt_Init(lib_AmfiProt_Handle_t *handle, uint8_t _deviceID)
 {
 	assert(handle);
 
-	lib_AmfiProt_SetDeviceID(deviceID);
+	lib_AmfiProt_SetDeviceID(_deviceID);
 
 	return true;
 }

@@ -9,7 +9,7 @@ set_target_properties(${CMAKE_LIBRARY_NAME} PROPERTIES
     C_STANDARD_REQUIRED ON
     C_EXTENSIONS OFF
     CXX_STANDARD 23
-    STANDARD_REQUIRED ON
+    CXX_STANDARD_REQUIRED ON
     CXX_EXTENSIONS OFF
 )
 
@@ -42,7 +42,6 @@ target_sources(${CMAKE_LIBRARY_NAME} PRIVATE
     src/Amfitrack_Source.h
     src/HID_Monitor.cpp
     src/HID_Monitor.h
-    src/project_conf.h
 
     src/Amfitrack_callbacks.cpp
     src/Amfitrack_callbacks.h
@@ -70,24 +69,27 @@ target_sources(${CMAKE_LIBRARY_NAME} PRIVATE
 
     src/Amfitrack_task.cpp
     src/Amfitrack_task.h
-
-    
-    
-
 )
 
-# ===== HIDAPI Cross-Platform Integration =====
-set(BUILD_SHARED_LIBS OFF)  # Force static library
-add_subdirectory(${HIDAPI_PATH})
-include_directories(${HIDAPI_PATH}/hidapi)
+# ===== Amfitrack feature options =====
+option(AMFITRACK_USE_USB "Enable USB support via HIDAPI" ON)
+option(AMFITRACK_USE_THREAD_BASED "Enable thread-based USB/data processing" ON)
 
-# Aggregate all deps into one thing the parent can link to
-target_link_libraries(${CMAKE_LIBRARY_NAME} PUBLIC
-    hidapi::hidapi
-)
+if(AMFITRACK_USE_USB)
+    target_compile_definitions(${CMAKE_LIBRARY_NAME} PUBLIC USE_USB)
+    # ===== HIDAPI Cross-Platform Integration =====
+    set(BUILD_SHARED_LIBS OFF)  # Force static library
+    add_subdirectory(${HIDAPI_PATH})
+    include_directories(${HIDAPI_PATH}/hidapi)
 
-if (CMAKE_VERSION VERSION_GREATER 3.12)
-  set_property(TARGET ${APP_NAME} PROPERTY CXX_STANDARD 20)
+    # Aggregate all deps into one thing the parent can link to
+    target_link_libraries(${CMAKE_LIBRARY_NAME} PUBLIC
+        hidapi::hidapi
+    )
+endif()
+
+if(AMFITRACK_USE_THREAD_BASED)
+    target_compile_definitions(${CMAKE_LIBRARY_NAME} PUBLIC USE_THREAD_BASED)
 endif()
 
 # Compiler-specific options

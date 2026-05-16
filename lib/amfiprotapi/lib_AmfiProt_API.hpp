@@ -25,9 +25,7 @@
 #include "lib_AmfiProt.hpp"
 #include "lib_AmfiProt_Amfitrack.hpp"
 
-#ifdef USE_ACTIVE_DEVICE_HANDLING
 #include "time.h"
-#endif
 
 #ifdef USE_THREAD_BASED
 #include <iostream>
@@ -154,9 +152,7 @@ class AmfiProt_API : public lib_AmfiProt, public lib_AmfiProt_AmfiTrack
 
 	uint8_t _retransmitCount;
 	bool _lastPackageNumberError;
-#ifdef USE_ACTIVE_DEVICE_HANDLING
 	time_t _retransmitTimer;
-#endif
 };
 
 //-----------------------------------------------------------------------------

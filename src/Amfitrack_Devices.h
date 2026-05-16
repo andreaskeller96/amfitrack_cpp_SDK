@@ -9,7 +9,6 @@
 //-----------------------------------------------------------------------------
 #include "Amfitrack_Sensor.h"
 #include "Amfitrack_Source.h"
-#include "project_conf.h"
 
 #include <chrono>
 #include <cstddef>

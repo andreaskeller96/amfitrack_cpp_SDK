@@ -7,8 +7,6 @@
 //-----------------------------------------------------------------------------
 // Section: Includes
 //-----------------------------------------------------------------------------
-#include "project_conf.h"
-
 #include "../AmfitrackDeviceTypes.h"
 #include "../lib/amfiprotapi/lib_AmfiProt_Amfitrack.hpp"
 #include "HID_Monitor.h"

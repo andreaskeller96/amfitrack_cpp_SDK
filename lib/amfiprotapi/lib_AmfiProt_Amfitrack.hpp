@@ -18,12 +18,6 @@
 #include <stdbool.h>
 #include <assert.h>
 
-#ifdef USE_PROJECT_CONF
-#include "project_conf.h"
-#else
-#include "../../src/project_conf.h"
-#endif
-
 #include "lib_AmfiProt.hpp"
 
 #ifndef __PACKED_STRUCT
@@ -326,7 +320,6 @@ typedef __PACKED_STRUCT
 
 	/** Frame ID */
 	lib_AmfiProt_Amfitrack_FrameID_24b_t frame_id;
-#if FIRMWARE_VERSION > 300
 
 	/** X coil voltage */
 	float voltage_coil_x_in_V;
@@ -339,7 +332,6 @@ typedef __PACKED_STRUCT
 
 	/** Boost voltage */
 	float voltage_boost_in_V;
-#endif
 }
 lib_AmfiProt_Amfitrack_Source_Measurement_t;
 // static_assert(sizeof(lib_AmfiProt_Amfitrack_Source_Measurement_t) <= AmfiProtMaxPayloadLength, "lib_AmfiProt_Amfitrack_Source_Measurement_t larger than max payload size");

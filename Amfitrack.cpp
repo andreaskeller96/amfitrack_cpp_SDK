@@ -9,7 +9,6 @@
 //-----------------------------------------------------------------------------
 // Section: Includes
 //-----------------------------------------------------------------------------
-
 #include "Amfitrack.h"
 
 #include "lib/amfiprotapi/lib_AmfiProt_API.hpp"
@@ -18,10 +17,13 @@
 #include "src/Amfitrack_Source.h"
 #include "src/Amfitrack_task.h"
 #include "src/HID_Monitor.h"
-#include "src/project_conf.h"
 
 #include <memory>
 #include <utility>
+
+#if USE_THREAD_BASED
+#include "thread"
+#endif
 
 //-----------------------------------------------------------------------------
 // Section: Define

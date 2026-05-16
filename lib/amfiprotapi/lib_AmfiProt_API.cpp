@@ -59,9 +59,7 @@ void AmfiProt_API::isRequestAckSet(uint8_t idx)
 	if (controlBits)
 	{
 		this->isTransmitting = true;
-#ifdef USE_ACTIVE_DEVICE_HANDLING
 		time(&_retransmitTimer);
-#endif
 	}
 	else
 	{
@@ -171,8 +169,6 @@ void AmfiProt_API::set_transmit_ongoing_and_check_respons_request(uint8_t idx)
 void AmfiProt_API::amfiprot_run(void)
 {
 	this->process_incoming_queue();
-
-#ifdef USE_ACTIVE_DEVICE_HANDLING
 	static time_t current_timer;
 	time(&current_timer);
 	double diffTime = difftime(current_timer, _retransmitTimer);
@@ -187,7 +183,6 @@ void AmfiProt_API::amfiprot_run(void)
 		}
 		this->isTransmitting = false;
 	}
-#endif
 }
 
 void AmfiProt_API::libAmfiProt_handle_Ack(void *handle, lib_AmfiProt_Frame_t *frame, void *routing_handle)
