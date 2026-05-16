@@ -52,7 +52,7 @@ class AMFITRACK_Config
   public:
 	static AMFITRACK_Config &getInstance();
 
-	bool start(uint8_t device_id);
+	bool start(uint8_t device_id, bool force_all = false);
 	void run();
 	ConfigDiscoveryState_t state(uint8_t device_id) const;
 
@@ -93,5 +93,6 @@ class AMFITRACK_Config
 	ConfigDiscoveryState_t _state = CONFIG_DISCOVERY_IDLE;
 	uint8_t _category_index = 0U;
 	uint16_t _config_index = 0U;
+	bool _force_all_config = false;
 	bool _waiting_for_reply = false;
 };

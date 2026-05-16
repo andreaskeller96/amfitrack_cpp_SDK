@@ -20,11 +20,7 @@
 //-----------------------------------------------------------------------------
 // Section: Define
 //-----------------------------------------------------------------------------
-#ifndef MAX_NUMBER_OF_DEVICES
-#define MAX_NUMBER_OF_DEVICES 254
-#endif
-
-#define AMFITRACK_DEVICE_COUNT 255U
+#define AMFITRACK_DEVICE_COUNT 50
 #define AMFITRACK_BROADCAST_DEVICE_ID 255U
 //-----------------------------------------------------------------------------
 // Section: Typedef

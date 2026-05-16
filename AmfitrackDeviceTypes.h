@@ -45,7 +45,7 @@ typedef struct
 typedef struct
 {
 	uint32_t uid;
-	char name[64];
+	char name[45];
 	uint8_t categoryIndex;
 	lib_Generic_Parameter_Value config;
 } ConfigEntry_t;
@@ -53,9 +53,9 @@ typedef struct
 typedef struct
 {
 	uint8_t index;
-	char name[64];
-	uint8_t configCount;
-	ConfigEntry_t configs[100];
+	char name[52];
+	uint16_t configCount;
+	ConfigEntry_t configs[50]; // Need a way to not have it on stack?
 } CategoryEntry_t;
 
 typedef struct

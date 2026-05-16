@@ -43,6 +43,9 @@
 
 namespace
 {
+constexpr uint8_t kAllConfigCategory = static_cast<uint8_t>(lib_AmfiProt_ConfigCategory_All);
+constexpr char kAllConfigCategoryName[] = "All";
+
 template <typename T, std::size_t N>
 constexpr std::size_t array_count(T const (&)[N])
 {
@@ -120,7 +123,27 @@ DeviceConfig_t load_config(uint8_t device_id)
 	return config;
 }
 
-CategoryEntry_t *ensure_category(DeviceConfig_t &config, uint8_t category_index)
+uint8_t all_config_storage_index(DeviceConfig_t const &config)
+{
+	return static_cast<uint8_t>(array_count(config.categories) - 1U);
+}
+
+bool is_all_config_category(uint8_t category)
+{
+	return category == kAllConfigCategory;
+}
+
+uint8_t storage_category_index(DeviceConfig_t const &config, uint8_t wire_category, bool force_all)
+{
+	if (force_all || is_all_config_category(wire_category))
+	{
+		return all_config_storage_index(config);
+	}
+
+	return wire_category;
+}
+
+CategoryEntry_t *ensure_category(DeviceConfig_t &config, uint8_t category_index, uint8_t category_label)
 {
 	if (category_index >= array_count(config.categories))
 	{
@@ -139,8 +162,23 @@ CategoryEntry_t *ensure_category(DeviceConfig_t &config, uint8_t category_index)
 	}
 
 	CategoryEntry_t &category = config.categories[category_index];
-	category.index = category_index;
+	category.index = category_label;
 	return &category;
+}
+
+CategoryEntry_t *ensure_category(DeviceConfig_t &config, uint8_t category_index)
+{
+	return ensure_category(config, category_index, category_index);
+}
+
+CategoryEntry_t *ensure_all_config_category(DeviceConfig_t &config)
+{
+	CategoryEntry_t *category = ensure_category(config, all_config_storage_index(config), kAllConfigCategory);
+	if (category != nullptr)
+	{
+		copy_payload_name(category->name, sizeof(category->name), kAllConfigCategoryName, sizeof(kAllConfigCategoryName));
+	}
+	return category;
 }
 
 bool store_config(uint8_t device_id, DeviceConfig_t const &config)
@@ -160,7 +198,7 @@ AMFITRACK_Config &AMFITRACK_Config::getInstance()
 	return instance;
 }
 
-bool AMFITRACK_Config::start(uint8_t device_id)
+bool AMFITRACK_Config::start(uint8_t device_id, bool force_all)
 {
 	if (!AMFITRACK_Devices::is_valid_device_id(device_id))
 	{
@@ -171,16 +209,25 @@ bool AMFITRACK_Config::start(uint8_t device_id)
 #ifdef USE_THREAD_BASED
 	const std::lock_guard<std::mutex> lock(_mutex);
 #endif
+	// Force all does not work currently.
+	bool forceAll = false;
 
-	LOG_I("start: beginning config discovery for device_id=%u", device_id);
+	LOG_I("start: beginning config discovery for device_id=%u, force_all=%s",
+		  device_id,
+		  forceAll ? "true" : "false");
 
 	DeviceConfig_t config = {};
+	if (forceAll)
+	{
+		ensure_all_config_category(config);
+	}
 	store_config(device_id, config);
 
 	_device_id = device_id;
-	_state = CONFIG_DISCOVERY_CATEGORY_COUNT;
-	_category_index = 0U;
+	_state = forceAll ? CONFIG_DISCOVERY_VALUE_COUNT : CONFIG_DISCOVERY_CATEGORY_COUNT;
+	_category_index = force_all ? all_config_storage_index(config) : 0U;
 	_config_index = 0U;
+	_force_all_config = forceAll;
 	_waiting_for_reply = false;
 
 	return request_current();
@@ -324,17 +371,20 @@ bool AMFITRACK_Config::set(uint8_t device_id, lib_AmfiProt_ConfigValueCount_t co
 		  config_count.count);
 
 	DeviceConfig_t config = load_config(device_id);
-	CategoryEntry_t *category = ensure_category(config, config_count.category);
+	const uint8_t category_index = storage_category_index(config, config_count.category, _force_all_config);
+	CategoryEntry_t *category = (_force_all_config || is_all_config_category(config_count.category))
+									? ensure_all_config_category(config)
+									: ensure_category(config, category_index);
 
 	if (category == nullptr)
 	{
-		LOG_E("set(ValueCount): failed to ensure category at index %u", config_count.category);
+		LOG_E("set(ValueCount): failed to ensure category at index %u", category_index);
 		return false;
 	}
 
 	const std::size_t config_capacity = array_count(category->configs);
-	const uint8_t count = static_cast<uint8_t>(std::min<std::size_t>(config_count.count, config_capacity));
-	const uint8_t previous_count = category->configCount;
+	const uint16_t count = static_cast<uint16_t>(std::min<std::size_t>(config_count.count, config_capacity));
+	const uint16_t previous_count = category->configCount;
 
 	if (config_count.count > config_capacity)
 	{
@@ -365,9 +415,17 @@ bool AMFITRACK_Config::set(uint8_t device_id, lib_AmfiProt_ConfigValueCount_t co
 	category->configCount = count;
 	const bool stored = store_config(device_id, config);
 
-	if (stored && is_active(device_id, CONFIG_DISCOVERY_VALUE_COUNT) && (config_count.category == _category_index))
+	if (stored && is_active(device_id, CONFIG_DISCOVERY_VALUE_COUNT) &&
+		(_force_all_config || (config_count.category == _category_index)))
 	{
-		_category_index++;
+		if (_force_all_config)
+		{
+			_category_index = static_cast<uint8_t>(category_index + 1U);
+		}
+		else
+		{
+			_category_index++;
+		}
 		_waiting_for_reply = false;
 		LOG_D("set(ValueCount): value count stored, advancing to category_index=%u", _category_index);
 
@@ -401,31 +459,33 @@ bool AMFITRACK_Config::set(uint8_t device_id, lib_AmfiProt_ConfigNameUID_protoco
 		  config_name.config_names.name);
 
 	DeviceConfig_t config = load_config(device_id);
-	CategoryEntry_t *category = ensure_category(config, category_index);
+	const uint8_t storage_index = storage_category_index(config, category_index, _force_all_config);
+	CategoryEntry_t *category = (_force_all_config || is_all_config_category(category_index))
+									? ensure_all_config_category(config)
+									: ensure_category(config, storage_index);
 
 	if ((category == nullptr) || (config_index >= array_count(category->configs)))
 	{
 		LOG_E("set(NameUID): invalid category %u or config_index %u out of bounds",
-			  category_index,
+			  storage_index,
 			  config_index);
 		return false;
 	}
 
 	if (category->configCount <= config_index)
 	{
-		category->configCount = static_cast<uint8_t>(config_index + 1U);
+		category->configCount = static_cast<uint16_t>(config_index + 1U);
 	}
 
 	ConfigEntry_t &config_entry = category->configs[config_index];
 	config_entry.uid = config_name.config_names.uid;
-	config_entry.categoryIndex = category_index;
+	config_entry.categoryIndex = category->index;
 	copy_payload_name(config_entry.name, sizeof(config_entry.name), config_name.config_names.name, sizeof(config_name.config_names.name));
 
 	const bool stored = store_config(device_id, config);
 
 	if (stored && is_active(device_id, CONFIG_DISCOVERY_NAMES_BY_UID) &&
-		(category_index == _category_index) &&
-		(config_index == _config_index))
+		(_force_all_config || (category_index == _category_index)) && (config_index == _config_index))
 	{
 		_config_index++;
 		_waiting_for_reply = false;
@@ -574,6 +634,12 @@ bool AMFITRACK_Config::request_category_name()
 bool AMFITRACK_Config::request_value_count()
 {
 	DeviceConfig_t config = load_config(_device_id);
+	if (_force_all_config)
+	{
+		ensure_all_config_category(config);
+		_category_index = all_config_storage_index(config);
+	}
+
 	if (_category_index >= config.categoryCount)
 	{
 		LOG_D("request_value_count: category_index=%u >= categoryCount=%u, advancing",
@@ -583,16 +649,19 @@ bool AMFITRACK_Config::request_value_count()
 		return request_current();
 	}
 
-	LOG_D("request_value_count: requesting value count for category_index=%u", _category_index);
+	const uint8_t request_category = _force_all_config ? kAllConfigCategory : config.categories[_category_index].index;
+	LOG_D("request_value_count: requesting value count for category=%u (storage_index=%u)",
+		  request_category,
+		  _category_index);
 
 	lib_AmfiProt_ConfigValueCountRequest_t payload = {};
 	payload.payloadID = lib_AmfiProt_PayloadID_RequestConfigurationValueCount;
-	payload.category = _category_index;
+	payload.category = request_category;
 
 	const bool queued = AmfiProt_API::getInstance().queue_frame(&payload, sizeof(payload), libAmfiProt_PayloadType_Common, lib_AmfiProt_packetType_NoAck, _device_id);
 	if (!queued)
 	{
-		LOG_W("request_value_count: failed to queue frame for category_index=%u", _category_index);
+		LOG_W("request_value_count: failed to queue frame for category=%u", request_category);
 	}
 	_waiting_for_reply = queued;
 	return queued;
@@ -608,18 +677,22 @@ bool AMFITRACK_Config::request_name_by_uid()
 		return request_current();
 	}
 
-	LOG_D("request_name_by_uid: requesting category=%u, index=%u", _category_index, _config_index);
+	const uint8_t request_category = _force_all_config ? kAllConfigCategory : config.categories[_category_index].index;
+	LOG_D("request_name_by_uid: requesting category=%u, index=%u (storage_index=%u)",
+		  request_category,
+		  _config_index,
+		  _category_index);
 
 	lib_AmfiProt_ConfigNameRequestUID_t payload = {};
 	payload.payloadID = lib_AmfiProt_PayloadID_RequestConfigurationNameAndUID;
-	payload.category = _category_index;
+	payload.category = request_category;
 	payload.index = _config_index;
 
 	const bool queued = AmfiProt_API::getInstance().queue_frame(&payload, sizeof(payload), libAmfiProt_PayloadType_Common, lib_AmfiProt_packetType_NoAck, _device_id);
 	if (!queued)
 	{
 		LOG_W("request_name_by_uid: failed to queue frame for category=%u, index=%u",
-			  _category_index,
+			  request_category,
 			  _config_index);
 	}
 	_waiting_for_reply = queued;
@@ -678,10 +751,9 @@ bool AMFITRACK_Config::is_active(uint8_t device_id, ConfigDiscoveryState_t state
 
 void AMFITRACK_Config::advance_to_value_count(DeviceConfig_t const &config)
 {
-	(void)config;
 	LOG_I("advance_to_value_count: entering VALUE_COUNT state");
 	_state = CONFIG_DISCOVERY_VALUE_COUNT;
-	_category_index = 0U;
+	_category_index = _force_all_config ? all_config_storage_index(config) : 0U;
 	_config_index = 0U;
 	_waiting_for_reply = false;
 }
@@ -690,7 +762,7 @@ void AMFITRACK_Config::advance_to_names_by_uid(DeviceConfig_t const &config)
 {
 	LOG_I("advance_to_names_by_uid: entering NAMES_BY_UID state");
 	_state = CONFIG_DISCOVERY_NAMES_BY_UID;
-	_category_index = 0U;
+	_category_index = _force_all_config ? all_config_storage_index(config) : 0U;
 	_config_index = 0U;
 	_waiting_for_reply = false;
 
@@ -705,7 +777,7 @@ void AMFITRACK_Config::advance_to_values_by_uid(DeviceConfig_t const &config)
 {
 	LOG_I("advance_to_values_by_uid: entering VALUES_BY_UID state");
 	_state = CONFIG_DISCOVERY_VALUES_BY_UID;
-	_category_index = 0U;
+	_category_index = _force_all_config ? all_config_storage_index(config) : 0U;
 	_config_index = 0U;
 	_waiting_for_reply = false;
 
@@ -800,9 +872,16 @@ void AMFITRACK_Config::print_config(uint8_t device_id)
 	LOG_I("Config dump for device_id=%u", device_id);
 	LOG_I("  categoryCount=%u", config.categoryCount);
 
+	bool printed_category = false;
 	for (std::size_t category_index = 0U; category_index < config.categoryCount; category_index++)
 	{
 		const CategoryEntry_t &category = config.categories[category_index];
+		if ((category.configCount == 0U) && (category.name[0] == '\0'))
+		{
+			continue;
+		}
+
+		printed_category = true;
 		LOG_I("  [Category %u] \"%s\" (%u config(s))",
 			  category.index,
 			  category.name,
@@ -816,6 +895,11 @@ void AMFITRACK_Config::print_config(uint8_t device_id)
 		}
 	}
 
+	if (!printed_category)
+	{
+		LOG_I("  (no categories populated)");
+	}
+
 	LOG_I("==============================");
 }
 
@@ -825,5 +909,6 @@ void AMFITRACK_Config::finish()
 	_state = CONFIG_DISCOVERY_DONE;
 	_category_index = 0U;
 	_config_index = 0U;
+	_force_all_config = false;
 	_waiting_for_reply = false;
 }

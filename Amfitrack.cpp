@@ -163,9 +163,9 @@ void AMFITRACK::setConfiguration(uint8_t DeviceID, uint32_t UID, lib_Generic_Par
 	amfiprot_api->queue_frame(&ConfigurationPayload, payloadSize, libAmfiProt_PayloadType_Common, lib_AmfiProt_packetType_NoAck, DeviceID);
 }
 
-bool AMFITRACK::getConfiguration(uint8_t DeviceID)
+bool AMFITRACK::getConfiguration(uint8_t DeviceID, bool force_all)
 {
-	return AMFITRACK_Config::getInstance().start(DeviceID);
+	return AMFITRACK_Config::getInstance().start(DeviceID, force_all);
 }
 
 ConfigDiscoveryState_t AMFITRACK::getConfigurationState(uint8_t DeviceID) const
