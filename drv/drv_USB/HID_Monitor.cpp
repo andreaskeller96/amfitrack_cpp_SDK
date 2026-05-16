@@ -408,11 +408,11 @@ void HIDMonitor::drainTxQueue()
 	if (!_cb.txPoll || !_cb.txDone)
 		return;
 
-	size_t queueIdx = 0, dataLen = 0;
+	size_t dataLen = 0;
 	uint8_t txId = 0;
 	void *txData = nullptr;
 
-	if (!_cb.txPoll(queueIdx, dataLen, txId, txData))
+	if (!_cb.txPoll(dataLen, txId, txData))
 		return;
 
 	bool sent = false;
@@ -443,7 +443,7 @@ void HIDMonitor::drainTxQueue()
 	}
 
 	if (sent)
-		_cb.txDone((uint8_t)queueIdx);
+		_cb.txDone();
 }
 
 void HIDMonitor::drainRx()

@@ -26,6 +26,7 @@ target_include_directories(${CMAKE_LIBRARY_NAME} PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/lib/lib_macro
     ${CMAKE_CURRENT_SOURCE_DIR}/lib/lib_queue
     ${CMAKE_CURRENT_SOURCE_DIR}/lib/lib_log
+    ${CMAKE_CURRENT_SOURCE_DIR}/lib/lib_fifo
 
     ${CMAKE_CURRENT_SOURCE_DIR}/drv/drv_USB
 
@@ -59,21 +60,16 @@ target_sources(${CMAKE_LIBRARY_NAME} PRIVATE
 
     lib/lib_crc/lib_CRC.c
     lib/lib_crc/lib_CRC.h
-
     lib/lib_generic_parameter/lib_Generic_Parameter.c
     lib/lib_generic_parameter/lib_Generic_Parameter.h
-
-    lib/lib_macro/lib_MACRO.h
-
-    lib/lib_queue/lib_Queue.c
-    lib/lib_queue/lib_Queue.h
-
     lib/lib_log/lib_log.cpp
     lib/lib_log/lib_log.h
+    lib/lib_fifo/lib_fifo.hpp
 
 
     drv/drv_USB/HID_Monitor.cpp
     drv/drv_USB/HID_Monitor.h
+
 )
 
 # ===== Amfitrack feature options =====

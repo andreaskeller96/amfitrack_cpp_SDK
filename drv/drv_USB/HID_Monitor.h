@@ -37,13 +37,12 @@ static constexpr uint8_t kUSBReportId = 0x01;
 //-----------------------------------------------------------------------------
 struct HIDMonitorCallbacks
 {
-	std::function<bool(size_t &queueIdxOut,
-					   size_t &lenOut,
+	std::function<bool(size_t &lenOut,
 					   uint8_t &txIdOut,
 					   void *&dataOut)>
 		txPoll;
 
-	std::function<void(uint8_t queueIdx)> txDone;
+	std::function<void()> txDone;
 
 	std::function<void(uint8_t sourceAddres, const uint8_t *data, size_t len)> rxPush;
 };

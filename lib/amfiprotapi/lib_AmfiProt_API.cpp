@@ -13,7 +13,7 @@
 // Includes
 //-----------------------------------------------------------------------------
 #include "lib_AmfiProt_API.hpp"
-#include "../lib/lib_log/lib_log.h"
+#include "lib_log.h"
 
 #ifdef USE_THREAD_BASED
 #include <iostream>
@@ -41,21 +41,25 @@
 //-----------------------------------------------------------------------------
 AmfiProt_API::AmfiProt_API()
 {
-	libQueue_Init(&incomingBulkPointer, sizeof(incomingBulkData) / sizeof(incomingBulkData[0]));
-	libQueue_Init(&outgoingBulkPointer, sizeof(outgoingBulkData) / sizeof(outgoingBulkData[0]));
 }
 
 AmfiProt_API::~AmfiProt_API()
 {
 }
 
-void AmfiProt_API::isRequestAckSet(uint8_t idx)
+void AmfiProt_API::isRequestAckSet()
 {
 	// To check if its requesting an ack (Can it be done a better way?)
 	lib_AmfiProt_Frame_t amfiFrame;
 
-	memcpy(&amfiFrame, &this->outgoingBulkData[idx], sizeof(amfiFrame));
-	uint8_t controlBits = (amfiFrame.header.packetType & lib_AmfiProt_packetType_Mask);
+	if (!outgoingBulk_FiFo.peek(amfiFrame))
+	{
+		return;
+	}
+
+	uint8_t controlBits = amfiFrame.header.packetType &
+						  lib_AmfiProt_packetType_Mask;
+
 	if (controlBits)
 	{
 		this->isTransmitting = true;
@@ -63,32 +67,30 @@ void AmfiProt_API::isRequestAckSet(uint8_t idx)
 	}
 	else
 	{
-		libQueue_Remove(&(this->outgoingBulkPointer));
+		outgoingBulk_FiFo.pop(amfiFrame);
 		this->_retransmitCount = 0;
 	}
 }
 
 void AmfiProt_API::process_incoming_queue(void)
 {
-	while (!libQueue_Empty(&(this->incomingBulkPointer)))
-	{
-		size_t idx = libQueue_Read(&(this->incomingBulkPointer));
-		this->lib_AmfiProt_ProcessFrame(NULL, &(this->incomingBulkData[idx]), NULL);
 
-		libQueue_Remove(&(this->incomingBulkPointer));
+	while (!incomingBulk_FiFo.isEmpty())
+	{
+		lib_AmfiProt_Frame_t frame;
+		incomingBulk_FiFo.pop(frame);
+		this->lib_AmfiProt_ProcessFrame(NULL, &frame, NULL);
 	}
 }
 
 void AmfiProt_API::clear_isTransmitting(lib_AmfiProt_Frame_t *frame)
 {
-#ifdef USB_CONNECTION_DEBUG_INFO
-	LOG_I("clear_isTransmitting: frame package number: %u | last package number: %u", frame->header.packetNumber, this->_apiHandle->packetNumber[frame->header.source]);
-#endif
 	if (frame->header.packetNumber == this->packetNumber[frame->header.source])
 	{
-		if (!libQueue_Empty(&(this->outgoingBulkPointer)))
+		if (!outgoingBulk_FiFo.isEmpty())
 		{
-			libQueue_Remove(&(this->outgoingBulkPointer));
+			lib_AmfiProt_Frame_t frame;
+			outgoingBulk_FiFo.pop(frame);
 		}
 		this->_retransmitCount = 0;
 		this->isTransmitting = false;
@@ -105,11 +107,9 @@ bool AmfiProt_API::queue_frame(void const *payload, uint8_t length, uint8_t payl
 	packetNumber[destination] = packageNumber;
 	if (this->lib_AmfiProt_EncodeFrame(&amfiFrame, payload, length, payloadType, packetNumber[destination], destination, packetType))
 	{
-		if (!libQueue_Full(&this->outgoingBulkPointer))
+		if (!outgoingBulk_FiFo.isFull())
 		{
-			uint8_t frameLength = this->lib_AmfiProt_FrameSize(&amfiFrame);
-			memcpy(&(this->outgoingBulkData[libQueue_Write(&this->outgoingBulkPointer)]), &(amfiFrame), frameLength);
-			libQueue_Add(&this->outgoingBulkPointer);
+			outgoingBulk_FiFo.put(amfiFrame);
 			isOk = true;
 			packageNumber++;
 		}
@@ -124,10 +124,9 @@ bool AmfiProt_API::deserialize_frame(void const *pData, uint8_t length)
 	lib_AmfiProt_Frame_t frame;
 	if (lib_AmfiProt_DeserializeFrame(&frame, pData, length))
 	{
-		if (!libQueue_Full(&incomingBulkPointer))
+		if (!incomingBulk_FiFo.isFull())
 		{
-			memcpy(&(incomingBulkData[libQueue_Write(&incomingBulkPointer)]), &frame, sizeof(frame));
-			libQueue_Add(&(incomingBulkPointer));
+			incomingBulk_FiFo.put(frame);
 			isOk = true;
 		}
 		else
@@ -138,32 +137,30 @@ bool AmfiProt_API::deserialize_frame(void const *pData, uint8_t length)
 	return isOk;
 }
 
-bool AmfiProt_API::isDataReadyForTransmit(size_t *QueueIdx, size_t *QueueDataLength, uint8_t *TxID, void **TransmitData)
+bool AmfiProt_API::isDataReadyForTransmit(size_t *QueueDataLength, uint8_t *TxID, void **TransmitData)
 {
-	bool isDataReady = false;
-
-	if (!isTransmitting && !libQueue_Empty(&(outgoingBulkPointer)))
+	if (isTransmitting || outgoingBulk_FiFo.isEmpty())
 	{
-		size_t idx = libQueue_Read(&(outgoingBulkPointer));
-		size_t length = outgoingBulkData[idx].header.length + sizeof(lib_AmfiProt_Header) + 1;
-		// Find matching TxID
-		uint8_t tx_id = outgoingBulkData[idx].header.destination;
-
-		*TransmitData = &outgoingBulkData[idx];
-		*QueueIdx = idx;
-		*QueueDataLength = length;
-		*TxID = tx_id;
-
-		isDataReady = true;
+		return false;
 	}
 
-	return isDataReady;
+	lib_AmfiProt_Frame_t *frame = outgoingBulk_FiFo.peek();
+
+	if (frame == nullptr)
+	{
+		return false;
+	}
+	*QueueDataLength = frame->header.length + sizeof(lib_AmfiProt_Header) + 1;
+	*TxID = frame->header.destination;
+	*TransmitData = frame;
+
+	return true;
 }
 
-void AmfiProt_API::set_transmit_ongoing_and_check_respons_request(uint8_t idx)
+void AmfiProt_API::set_transmit_ongoing_and_check_respons_request()
 {
 	isTransmitting = true;
-	isRequestAckSet(idx);
+	isRequestAckSet();
 }
 
 void AmfiProt_API::amfiprot_run(void)
@@ -179,7 +176,8 @@ void AmfiProt_API::amfiprot_run(void)
 		if (this->_retransmitCount >= 3)
 		{
 			this->_retransmitCount = 0;
-			libQueue_Remove(&(this->outgoingBulkPointer));
+			lib_AmfiProt_Frame_t frame;
+			outgoingBulk_FiFo.pop(frame);
 		}
 		this->isTransmitting = false;
 	}

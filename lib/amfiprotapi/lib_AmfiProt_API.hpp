@@ -24,6 +24,7 @@
 #include <stdbool.h>
 #include "lib_AmfiProt.hpp"
 #include "lib_AmfiProt_Amfitrack.hpp"
+#include "lib_fifo.hpp"
 
 #include "time.h"
 
@@ -36,8 +37,8 @@
 extern "C"
 {
 #endif
-#include "../lib_queue/lib_Queue.h"
-#include "../lib_crc/lib_CRC.h"
+#include "lib_CRC.h"
+
 #ifdef __cplusplus
 }
 #endif // __cplusplus
@@ -46,7 +47,6 @@ extern "C"
 // Defines
 //-----------------------------------------------------------------------------
 #define MAX_PAYLOAD_SIZE 54
-
 //-----------------------------------------------------------------------------
 // Type declarations
 //-----------------------------------------------------------------------------
@@ -64,10 +64,9 @@ class AmfiProt_API : public lib_AmfiProt, public lib_AmfiProt_AmfiTrack
 	}
 
 	bool isTransmitting;
-	lib_AmfiProt_Frame_t outgoingBulkData[50];
-	libQueue_Pointer_t outgoingBulkPointer;
-	lib_AmfiProt_Frame_t incomingBulkData[50];
-	libQueue_Pointer_t incomingBulkPointer;
+
+	lib_fifo<lib_AmfiProt_Frame_t, 50> outgoingBulk_FiFo;
+	lib_fifo<lib_AmfiProt_Frame_t, 50> incomingBulk_FiFo;
 
 	/* Must always run! */
 	void amfiprot_run(void);
@@ -76,10 +75,10 @@ class AmfiProt_API : public lib_AmfiProt, public lib_AmfiProt_AmfiTrack
 
 	bool deserialize_frame(void const *pData, uint8_t length);
 
-	bool isDataReadyForTransmit(size_t *QueueIdx, size_t *QueueDataLength, uint8_t *TxID, void **TransmitData);
-	void set_transmit_ongoing_and_check_respons_request(uint8_t idx);
+	bool isDataReadyForTransmit(size_t *QueueDataLength, uint8_t *TxID, void **TransmitData);
+	void set_transmit_ongoing_and_check_respons_request();
 
-	void isRequestAckSet(uint8_t idx);
+	void isRequestAckSet();
 	void clear_isTransmitting(lib_AmfiProt_Frame_t *frame);
 
 	void libAmfiProt_handle_RequestProcedureSpec(void *handle, lib_AmfiProt_Frame_t *frame, void *routing_handle) override;

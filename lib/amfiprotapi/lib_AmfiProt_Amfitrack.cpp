@@ -22,15 +22,6 @@
 
 #include "lib_AmfiProt_Amfitrack.hpp"
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif
-#include "../lib_macro/lib_MACRO.h"
-#ifdef __cplusplus
-}
-#endif
-
 //-----------------------------------------------------------------------------
 // Defines
 //-----------------------------------------------------------------------------

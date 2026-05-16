@@ -22,14 +22,13 @@
 /// \endcond
 
 #include "lib_AmfiProt.hpp"
-#include "../lib/lib_log/lib_log.h"
+#include "lib_log.h"
 
 #ifdef __cplusplus
 extern "C"
 {
 #endif
 #include "../lib_crc/lib_CRC.h"
-#include "../lib_macro/lib_MACRO.h"
 #ifdef __cplusplus
 }
 #endif

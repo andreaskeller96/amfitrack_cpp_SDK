@@ -33,10 +33,12 @@
 extern "C"
 {
 #endif
-#include "../lib_generic_parameter/lib_Generic_Parameter.h"
+#include "lib_Generic_Parameter.h"
 #ifdef __cplusplus
 }
 #endif
+
+#define sizeof_member(type, member) (sizeof(((type *)0)->member))
 
 #ifndef AmfiProtMaxPacketLength
 #define AmfiProtMaxPacketLength 62

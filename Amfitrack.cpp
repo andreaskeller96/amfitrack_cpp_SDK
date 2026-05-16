@@ -84,14 +84,14 @@ void AMFITRACK::init()
 	{
 		HIDMonitorCallbacks cb;
 
-		cb.txPoll = [](size_t &queueIdx, size_t &len, uint8_t &txId, void *&data) -> bool
+		cb.txPoll = [](size_t &len, uint8_t &txId, void *&data) -> bool
 		{
-			return amfiprot_api->isDataReadyForTransmit(&queueIdx, &len, &txId, &data);
+			return amfiprot_api->isDataReadyForTransmit(&len, &txId, &data);
 		};
 
-		cb.txDone = [](uint8_t queueIdx)
+		cb.txDone = []()
 		{
-			amfiprot_api->set_transmit_ongoing_and_check_respons_request(queueIdx);
+			amfiprot_api->set_transmit_ongoing_and_check_respons_request();
 		};
 
 		cb.rxPush = [](uint8_t sourceAddress, const uint8_t *data, size_t len)
