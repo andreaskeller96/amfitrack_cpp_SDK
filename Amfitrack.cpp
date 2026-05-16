@@ -11,12 +11,12 @@
 //-----------------------------------------------------------------------------
 #include "Amfitrack.h"
 
-#include "lib/amfiprotapi/lib_AmfiProt_API.hpp"
-#include "lib/lib_log/lib_log.h"
-#include "src/Amfitrack_Devices.h"
-#include "src/Amfitrack_Source.h"
-#include "src/Amfitrack_task.h"
-#include "src/HID_Monitor.h"
+#include "lib_AmfiProt_API.hpp"
+#include "lib_log.h"
+#include "Amfitrack_Devices.h"
+#include "Amfitrack_Source.h"
+#include "Amfitrack_task.h"
+#include "HID_Monitor.h"
 
 #include <memory>
 #include <utility>
@@ -77,7 +77,7 @@ void AMFITRACK::init()
 {
 	amfiprot_api = &AmfiProt_API::getInstance();
 	AMFITRACK_Devices::getInstance().reset_devices();
-#ifdef USE_USB
+#if defined(USE_USB)
 	if (!hid_monitor)
 	{
 		HIDMonitorCallbacks cb;

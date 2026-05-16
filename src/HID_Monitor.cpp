@@ -14,9 +14,9 @@
 #include <cstdio>
 #include <cstring>
 #include <cwchar>
-#include "../lib/amfiprotapi/lib_AmfiProt.hpp"
-#include "../lib/lib_log/lib_log.h"
-#include "../Amfitrack.h"
+#include "lib_AmfiProt.hpp"
+#include "lib_log.h"
+#include "Amfitrack.h"
 #include "Amfitrack_Devices.h"
 #include "Amfitrack_Sensor.h"
 #include "Amfitrack_Source.h"

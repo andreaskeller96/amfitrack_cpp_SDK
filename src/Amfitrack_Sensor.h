@@ -7,8 +7,8 @@
 //-----------------------------------------------------------------------------
 // Section: Includes
 //-----------------------------------------------------------------------------
-#include "../AmfitrackDeviceTypes.h"
-#include "../lib/amfiprotapi/lib_AmfiProt_Amfitrack.hpp"
+#include "AmfitrackDeviceTypes.h"
+#include "lib_AmfiProt_Amfitrack.hpp"
 #include "HID_Monitor.h"
 
 #include <chrono>

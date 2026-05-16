@@ -9,12 +9,12 @@
 //-----------------------------------------------------------------------------
 // Section: Includes
 //-----------------------------------------------------------------------------
-#include "../lib/hidapi/hidapi/hidapi.h"
+#include "hidapi.h"
 #include <chrono>
 #include <cstdint>
 #include <functional>
 #include <vector>
-#include "../lib/amfiprotapi/lib_AmfiProt_API.hpp"
+#include "lib_AmfiProt_API.hpp"
 #include "Amfitrack_Sensor.h"
 #include "Amfitrack_Source.h"
 

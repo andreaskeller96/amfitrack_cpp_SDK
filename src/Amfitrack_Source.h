@@ -6,7 +6,7 @@
 //-----------------------------------------------------------------------------
 // Section: Includes
 //-----------------------------------------------------------------------------
-#include "../AmfitrackDeviceTypes.h"
+#include "AmfitrackDeviceTypes.h"
 #include "HID_Monitor.h"
 
 #include <cstdint>

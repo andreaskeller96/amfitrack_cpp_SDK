@@ -11,7 +11,7 @@
 //-----------------------------------------------------------------------------
 #include "Amfitrack_task.h"
 
-#include "../lib/amfiprotapi/lib_AmfiProt_API.hpp"
+#include "lib_AmfiProt_API.hpp"
 #include "Amfitrack_Devices.h"
 
 #include <chrono>

@@ -12,8 +12,8 @@
 //-----------------------------------------------------------------------------
 // Section: Includes
 //-----------------------------------------------------------------------------
-#include "src/Amfitrack_Sensor.h"
-#include "src/Amfitrack_Source.h"
+#include "Amfitrack_Sensor.h"
+#include "Amfitrack_Source.h"
 
 #include "lib_AmfiProt_API.hpp"
 

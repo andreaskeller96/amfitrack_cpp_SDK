@@ -11,7 +11,7 @@
 //-----------------------------------------------------------------------------
 #include "Amfitrack_Devices.h"
 
-#include "../lib/lib_log/lib_log.h"
+#include "lib_log.h"
 
 #include <algorithm>
 #include <cstring>

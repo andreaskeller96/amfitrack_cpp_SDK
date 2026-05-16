@@ -25,6 +25,7 @@ target_include_directories(${CMAKE_LIBRARY_NAME} PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/lib/lib_generic_parameter
     ${CMAKE_CURRENT_SOURCE_DIR}/lib/lib_macro
     ${CMAKE_CURRENT_SOURCE_DIR}/lib/lib_queue
+    ${CMAKE_CURRENT_SOURCE_DIR}/lib/lib_log
 
     ${HIDAPI_PATH}/hidapi
 )
