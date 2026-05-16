@@ -442,7 +442,7 @@ void lib_AmfiProt::lib_AmfiProt_ProcessFrame(void *handle, lib_AmfiProt_Frame_t 
 					break;
 					case lib_AmfiProt_PayloadID_ReplyConfigurationNameAndUID:
 					{
-						if (frame->header.length == sizeof(lib_AmfiProt_ConfigNameUID_common_t))
+						if (frame->header.length <= sizeof(lib_AmfiProt_ConfigNameUID_protocol_t))
 						{
 							this->libAmfiProt_handle_ConfigurationNameAndUID(handle, frame, routing_handle);
 						}
@@ -507,7 +507,7 @@ void lib_AmfiProt::lib_AmfiProt_ProcessFrame(void *handle, lib_AmfiProt_Frame_t 
 					break;
 					case lib_AmfiProt_PayloadID_ReplyConfigurationCategory:
 					{
-						if (frame->header.length == sizeof(lib_AmfiProt_ConfigCategory_t))
+						if (frame->header.length <= sizeof(lib_AmfiProt_ConfigCategory_t))
 						{
 							this->libAmfiProt_handle_ConfigurationCategory(handle, frame, routing_handle);
 						}

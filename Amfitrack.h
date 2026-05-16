@@ -14,6 +14,7 @@
 //-----------------------------------------------------------------------------
 #include "Amfitrack_Sensor.h"
 #include "Amfitrack_Source.h"
+#include "Amfitrack_config.h"
 
 #include "lib_AmfiProt_API.hpp"
 
@@ -54,6 +55,8 @@ class AMFITRACK
 	bool reset_source(uint8_t device_id);
 
 	void setConfiguration(uint8_t DeviceID, uint32_t UID, lib_Generic_Parameter_Value_t parameter);
+	bool getConfiguration(uint8_t DeviceID);
+	ConfigDiscoveryState_t getConfigurationState(uint8_t DeviceID) const;
 	//-----------------------------------------------------------------------------
 	// Old function will be deprecated
 	//-----------------------------------------------------------------------------

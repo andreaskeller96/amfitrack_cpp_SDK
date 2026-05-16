@@ -10,6 +10,8 @@
 #include <cstddef>
 #include <cstdint>
 
+#include "lib_Generic_Parameter.h"
+
 //-----------------------------------------------------------------------------
 // General struct types
 //-----------------------------------------------------------------------------
@@ -36,6 +38,31 @@ typedef struct
 	uint8_t SubVersion;
 	uint8_t Frequency;
 } HW_t;
+
+//-----------------------------------------------------------------------------
+// Configuration
+//-----------------------------------------------------------------------------
+typedef struct
+{
+	uint32_t uid;
+	char name[64];
+	uint8_t categoryIndex;
+	lib_Generic_Parameter_Value config;
+} ConfigEntry_t;
+
+typedef struct
+{
+	uint8_t index;
+	char name[64];
+	uint8_t configCount;
+	ConfigEntry_t configs[100];
+} CategoryEntry_t;
+
+typedef struct
+{
+	uint8_t categoryCount;
+	CategoryEntry_t categories[20];
+} DeviceConfig_t;
 
 //-----------------------------------------------------------------------------
 // Sensor struct types

@@ -51,6 +51,7 @@ class AMFITRACK_Source
 	FW_t FW_Version;
 	RF_t RF_Version;
 	HW_t HW_Version;
+	DeviceConfig_t config;
 
 	bool active;
 	uint8_t hub_ID;

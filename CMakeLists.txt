@@ -70,6 +70,8 @@ target_sources(${CMAKE_LIBRARY_NAME} PRIVATE
 
     src/Amfitrack_task.cpp
     src/Amfitrack_task.h
+    src/Amfitrack_config.cpp
+    src/Amfitrack_config.h
 )
 
 # ===== Amfitrack feature options =====

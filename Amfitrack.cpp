@@ -13,6 +13,7 @@
 
 #include "lib_AmfiProt_API.hpp"
 #include "lib_log.h"
+#include "Amfitrack_config.h"
 #include "Amfitrack_Devices.h"
 #include "Amfitrack_Source.h"
 #include "Amfitrack_task.h"
@@ -53,6 +54,7 @@ static void _run_all_amfitrack()
 	hid_monitor->run();
 #endif
 	amfiprot_api->amfiprot_run();
+	AMFITRACK_Config::getInstance().run();
 	amfitrack_task::run();
 }
 
@@ -159,6 +161,16 @@ void AMFITRACK::setConfiguration(uint8_t DeviceID, uint32_t UID, lib_Generic_Par
 	uint8_t payloadSize = sizeof(ConfigurationPayload) - sizeof(ConfigurationPayload.value) + lib_Generic_Parameter_SizeWithType(ConfigurationPayload.value);
 
 	amfiprot_api->queue_frame(&ConfigurationPayload, payloadSize, libAmfiProt_PayloadType_Common, lib_AmfiProt_packetType_NoAck, DeviceID);
+}
+
+bool AMFITRACK::getConfiguration(uint8_t DeviceID)
+{
+	return AMFITRACK_Config::getInstance().start(DeviceID);
+}
+
+ConfigDiscoveryState_t AMFITRACK::getConfigurationState(uint8_t DeviceID) const
+{
+	return AMFITRACK_Config::getInstance().state(DeviceID);
 }
 
 //-----------------------------------------------------------------------------

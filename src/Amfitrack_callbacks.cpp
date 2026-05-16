@@ -12,6 +12,7 @@
 #include "lib_AmfiProt_API.hpp"
 #include "Amfitrack.h"
 #include "AmfitrackDeviceTypes.h"
+#include "Amfitrack_config.h"
 #include "Amfitrack_Devices.h"
 #include "lib_log.h"
 //-----------------------------------------------------------------------------
@@ -366,7 +367,10 @@ void AmfiProt_API::libAmfiProt_handle_ConfigurationNameAndUID(void *handle, lib_
 	(void)handle;
 	(void)frame;
 	(void)routing_handle;
-	/* NOTE: Overwrite in application-specific library */
+	uint8_t _deviceID = frame->header.source;
+	lib_AmfiProt_ConfigNameUID_protocol_t amfiConfigNameUID;
+	memcpy(&amfiConfigNameUID, frame->payload, frame->header.length);
+	AMFITRACK_Config::getInstance().set(_deviceID, amfiConfigNameUID);
 }
 
 void AmfiProt_API::libAmfiProt_handle_RequestConfigurationValueUID(void *handle, lib_AmfiProt_Frame_t *frame, void *routing_handle)
@@ -382,7 +386,10 @@ void AmfiProt_API::libAmfiProt_handle_ConfigurationValueUID(void *handle, lib_Am
 	(void)handle;
 	(void)frame;
 	(void)routing_handle;
-	/* NOTE: Overwrite in application-specific library */
+	uint8_t _deviceID = frame->header.source;
+	lib_AmfiProt_ConfigValueUID_t amfiConfigValueUID;
+	memcpy(&amfiConfigValueUID, frame->payload, sizeof(amfiConfigValueUID));
+	AMFITRACK_Config::getInstance().set(_deviceID, amfiConfigValueUID);
 }
 
 void AmfiProt_API::libAmfiProt_handle_SetConfigurationValueUID(void *handle, lib_AmfiProt_Frame_t *frame, void *routing_handle)
@@ -406,7 +413,10 @@ void AmfiProt_API::libAmfiProt_handle_ConfigurationCategory(void *handle, lib_Am
 	(void)handle;
 	(void)frame;
 	(void)routing_handle;
-	/* NOTE: Overwrite in application-specific library */
+	uint8_t _deviceID = frame->header.source;
+	lib_AmfiProt_ConfigCategory_t amfiConfigCategory;
+	memcpy(&amfiConfigCategory, frame->payload, frame->header.length);
+	AMFITRACK_Config::getInstance().set(_deviceID, amfiConfigCategory);
 }
 
 void AmfiProt_API::libAmfiProt_handle_RequestConfigurationValueCount(void *handle, lib_AmfiProt_Frame_t *frame, void *routing_handle)
@@ -422,7 +432,10 @@ void AmfiProt_API::libAmfiProt_handle_ConfigurationValueCount(void *handle, lib_
 	(void)handle;
 	(void)frame;
 	(void)routing_handle;
-	/* NOTE: Overwrite in application-specific library */
+	uint8_t _deviceID = frame->header.source;
+	lib_AmfiProt_ConfigValueCount_t amfiConfigValueCount;
+	memcpy(&amfiConfigValueCount, frame->payload, sizeof(amfiConfigValueCount));
+	AMFITRACK_Config::getInstance().set(_deviceID, amfiConfigValueCount);
 }
 
 void AmfiProt_API::libAmfiProt_handle_RequestCategoryCount(void *handle, lib_AmfiProt_Frame_t *frame, void *routing_handle)
@@ -438,7 +451,10 @@ void AmfiProt_API::libAmfiProt_handle_CategoryCount(void *handle, lib_AmfiProt_F
 	(void)handle;
 	(void)frame;
 	(void)routing_handle;
-	/* NOTE: Overwrite in application-specific library */
+	uint8_t _deviceID = frame->header.source;
+	lib_AmfiProt_ConfigCategoryCount_t amfiConfigCategoryCount;
+	memcpy(&amfiConfigCategoryCount, frame->payload, sizeof(amfiConfigCategoryCount));
+	AMFITRACK_Config::getInstance().set(_deviceID, amfiConfigCategoryCount);
 }
 
 void AmfiProt_API::libAmfiProt_handle_Reboot(void *handle, lib_AmfiProt_Frame_t *frame, void *routing_handle)
