@@ -30,6 +30,13 @@ AMFITRACK::AMFITRACK()
         Position[i].orientation_y = 0;
         Position[i].orientation_z = 0;
         Position[i].orientation_w = 0;
+
+        ConfigEnumStates[i].status = ConfigEnumStatus::Idle;
+        ConfigEnumStates[i].waiting_for = ConfigWaitingFor::Nothing;
+        ConfigEnumStates[i].expected_count = 0;
+        ConfigEnumStates[i].pending_index = 0;
+        ConfigEnumStates[i].pending_uid = 0;
+        ConfigEnumStates[i].retry_count = 0;
     }
 }
 
@@ -67,6 +74,8 @@ void AMFITRACK::background_amfitrack_task(AMFITRACK *inst)
                 AMFITRACK.checkDeviceDisconnected(devices);
             }
         }
+
+        AMFITRACK.processConfigurationEnumeration();
 
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
@@ -116,6 +125,8 @@ void AMFITRACK::amfitrack_main_loop(void)
         }
     }
 #endif
+
+    AMFITRACK.processConfigurationEnumeration();
 }
 
 void AMFITRACK::initialize_amfitrack()
@@ -159,6 +170,260 @@ void AMFITRACK::setConfiguration(uint8_t DeviceID, uint32_t UID, lib_Generic_Par
     uint8_t payloadSize = sizeof(ConfigurationPayload) - sizeof(ConfigurationPayload.value) + lib_Generic_Parameter_SizeWithType(ConfigurationPayload.value);
 
     amfiprot_api.queue_frame(&ConfigurationPayload, payloadSize, libAmfiProt_PayloadType_Common, lib_AmfiProt_packetType_NoAck, DeviceID);
+}
+
+//-----------------------------------------------------------------------------
+// Configuration enumeration (full-config read)
+//-----------------------------------------------------------------------------
+
+namespace
+{
+constexpr int kConfigRequestTimeoutMs = 250;
+constexpr uint8_t kConfigMaxRetries = 8;
+} // namespace
+
+void AMFITRACK::sendCountRequest(uint8_t DeviceID)
+{
+    AmfiProt_API &amfiprot_api = AmfiProt_API::getInstance();
+    lib_AmfiProt_ConfigValueCountRequest_t req = {};
+    req.payloadID = lib_AmfiProt_PayloadID_RequestConfigurationValueCount;
+    req.category = 0xFF;
+    amfiprot_api.queue_frame(&req, sizeof(req), libAmfiProt_PayloadType_Common, lib_AmfiProt_packetType_NoAck, DeviceID);
+}
+
+void AMFITRACK::sendNameAndUidRequest(uint8_t DeviceID, uint16_t index)
+{
+    AmfiProt_API &amfiprot_api = AmfiProt_API::getInstance();
+    lib_AmfiProt_ConfigNameRequestUID_t req = {};
+    req.payloadID = lib_AmfiProt_PayloadID_RequestConfigurationNameAndUID;
+    req.category = 0xFF;
+    req.index = index;
+    amfiprot_api.queue_frame(&req, sizeof(req), libAmfiProt_PayloadType_Common, lib_AmfiProt_packetType_NoAck, DeviceID);
+}
+
+void AMFITRACK::sendValueRequest(uint8_t DeviceID, uint32_t uid)
+{
+    AmfiProt_API &amfiprot_api = AmfiProt_API::getInstance();
+    lib_AmfiProt_ConfigValueUIDRequest_t req = {};
+    req.payloadID = lib_AmfiProt_PayloadID_RequestConfigurationValueUID;
+    req.uid = uid;
+    amfiprot_api.queue_frame(&req, sizeof(req), libAmfiProt_PayloadType_Common, lib_AmfiProt_packetType_NoAck, DeviceID);
+}
+
+void AMFITRACK::failEnumeration(ConfigEnumState &st)
+{
+    st.status = ConfigEnumStatus::Failed;
+    st.waiting_for = ConfigWaitingFor::Nothing;
+}
+
+bool AMFITRACK::requestFullConfiguration(uint8_t DeviceID)
+{
+    if (!getDeviceActive(DeviceID))
+        return false;
+
+    {
+#ifdef USE_THREAD_BASED
+        const std::lock_guard<std::mutex> lock(mutConfigEnum);
+#endif
+        ConfigEnumState &st = ConfigEnumStates[DeviceID];
+        if (st.status == ConfigEnumStatus::InProgress)
+            return false;
+        st.parameters.clear();
+        st.status = ConfigEnumStatus::InProgress;
+        st.waiting_for = ConfigWaitingFor::Count;
+        st.expected_count = 0;
+        st.pending_index = 0;
+        st.pending_uid = 0;
+        st.retry_count = 0;
+        st.last_request_time = std::chrono::steady_clock::now();
+    }
+    sendCountRequest(DeviceID);
+    return true;
+}
+
+ConfigEnumStatus AMFITRACK::getConfigurationStatus(uint8_t DeviceID)
+{
+#ifdef USE_THREAD_BASED
+    const std::lock_guard<std::mutex> lock(mutConfigEnum);
+#endif
+    return ConfigEnumStates[DeviceID].status;
+}
+
+bool AMFITRACK::getFullConfiguration(uint8_t DeviceID, std::vector<ConfigParameter> &out)
+{
+#ifdef USE_THREAD_BASED
+    const std::lock_guard<std::mutex> lock(mutConfigEnum);
+#endif
+    ConfigEnumState &st = ConfigEnumStates[DeviceID];
+    if (st.status != ConfigEnumStatus::Complete)
+        return false;
+    out = st.parameters;
+    return true;
+}
+
+void AMFITRACK::onConfigCountReply(uint8_t DeviceID, uint16_t count)
+{
+    bool send_next = false;
+    uint16_t next_index = 0;
+    {
+#ifdef USE_THREAD_BASED
+        const std::lock_guard<std::mutex> lock(mutConfigEnum);
+#endif
+        ConfigEnumState &st = ConfigEnumStates[DeviceID];
+        if (st.status != ConfigEnumStatus::InProgress || st.waiting_for != ConfigWaitingFor::Count)
+            return;
+        st.expected_count = count;
+        if (count == 0)
+        {
+            st.status = ConfigEnumStatus::Complete;
+            st.waiting_for = ConfigWaitingFor::Nothing;
+            return;
+        }
+        st.parameters.assign(count, ConfigParameter{});
+        st.waiting_for = ConfigWaitingFor::NameAndUid;
+        st.pending_index = 0;
+        st.retry_count = 0;
+        st.last_request_time = std::chrono::steady_clock::now();
+        send_next = true;
+        next_index = 0;
+    }
+    if (send_next)
+        sendNameAndUidRequest(DeviceID, next_index);
+}
+
+void AMFITRACK::onConfigNameAndUidReply(uint8_t DeviceID, uint16_t index, uint8_t category, uint32_t uid, const char *name, size_t name_len)
+{
+    bool send_name = false;
+    bool send_value = false;
+    uint16_t next_index = 0;
+    uint32_t next_uid = 0;
+    {
+#ifdef USE_THREAD_BASED
+        const std::lock_guard<std::mutex> lock(mutConfigEnum);
+#endif
+        ConfigEnumState &st = ConfigEnumStates[DeviceID];
+        if (st.status != ConfigEnumStatus::InProgress || st.waiting_for != ConfigWaitingFor::NameAndUid)
+            return;
+        if (index != st.pending_index || index >= st.parameters.size())
+            return; // stale or out-of-range; rely on retry
+
+        ConfigParameter &p = st.parameters[index];
+        p.uid = uid;
+        p.category = category;
+        size_t copy_len = name_len < (CONFIG_PARAM_NAME_LENGTH - 1) ? name_len : (CONFIG_PARAM_NAME_LENGTH - 1);
+        memcpy(p.name, name, copy_len);
+        p.name[copy_len] = '\0';
+        p.name_received = true;
+
+        st.retry_count = 0;
+        st.last_request_time = std::chrono::steady_clock::now();
+
+        if (index + 1 < st.expected_count)
+        {
+            st.pending_index = index + 1;
+            next_index = st.pending_index;
+            send_name = true;
+        }
+        else
+        {
+            st.waiting_for = ConfigWaitingFor::Value;
+            st.pending_index = 0;
+            st.pending_uid = st.parameters[0].uid;
+            next_uid = st.pending_uid;
+            send_value = true;
+        }
+    }
+    if (send_name)
+        sendNameAndUidRequest(DeviceID, next_index);
+    if (send_value)
+        sendValueRequest(DeviceID, next_uid);
+}
+
+void AMFITRACK::onConfigValueUidReply(uint8_t DeviceID, uint32_t uid, const lib_Generic_Parameter_Value_t &value)
+{
+    bool send_next = false;
+    uint32_t next_uid = 0;
+    {
+#ifdef USE_THREAD_BASED
+        const std::lock_guard<std::mutex> lock(mutConfigEnum);
+#endif
+        ConfigEnumState &st = ConfigEnumStates[DeviceID];
+        if (st.status != ConfigEnumStatus::InProgress || st.waiting_for != ConfigWaitingFor::Value)
+            return;
+        if (st.pending_index >= st.parameters.size() || st.parameters[st.pending_index].uid != uid)
+            return; // stale or duplicate
+
+        st.parameters[st.pending_index].value = value;
+        st.parameters[st.pending_index].value_received = true;
+
+        st.retry_count = 0;
+        st.last_request_time = std::chrono::steady_clock::now();
+
+        if (st.pending_index + 1 < st.expected_count)
+        {
+            st.pending_index += 1;
+            st.pending_uid = st.parameters[st.pending_index].uid;
+            next_uid = st.pending_uid;
+            send_next = true;
+        }
+        else
+        {
+            st.status = ConfigEnumStatus::Complete;
+            st.waiting_for = ConfigWaitingFor::Nothing;
+        }
+    }
+    if (send_next)
+        sendValueRequest(DeviceID, next_uid);
+}
+
+void AMFITRACK::processConfigurationEnumeration()
+{
+    auto now = std::chrono::steady_clock::now();
+    for (uint8_t id = 0; id < MAX_NUMBER_OF_DEVICES; id++)
+    {
+        ConfigWaitingFor what = ConfigWaitingFor::Nothing;
+        uint16_t resend_index = 0;
+        uint32_t resend_uid = 0;
+        bool resend = false;
+        {
+#ifdef USE_THREAD_BASED
+            const std::lock_guard<std::mutex> lock(mutConfigEnum);
+#endif
+            ConfigEnumState &st = ConfigEnumStates[id];
+            if (st.status != ConfigEnumStatus::InProgress)
+                continue;
+            auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - st.last_request_time);
+            if (elapsed.count() < kConfigRequestTimeoutMs)
+                continue;
+            if (st.retry_count >= kConfigMaxRetries)
+            {
+                failEnumeration(st);
+                continue;
+            }
+            st.retry_count++;
+            st.last_request_time = now;
+            what = st.waiting_for;
+            resend_index = st.pending_index;
+            resend_uid = st.pending_uid;
+            resend = true;
+        }
+        if (!resend)
+            continue;
+        switch (what)
+        {
+        case ConfigWaitingFor::Count:
+            sendCountRequest(id);
+            break;
+        case ConfigWaitingFor::NameAndUid:
+            sendNameAndUidRequest(id, resend_index);
+            break;
+        case ConfigWaitingFor::Value:
+            sendValueRequest(id, resend_uid);
+            break;
+        case ConfigWaitingFor::Nothing:
+            break;
+        }
+    }
 }
 
 // This function checks if the device is disconnected,
@@ -609,9 +874,21 @@ void AmfiProt_API::libAmfiProt_handle_RequestConfigurationNameAndUID(void *handl
 void AmfiProt_API::libAmfiProt_handle_ConfigurationNameAndUID(void *handle, lib_AmfiProt_Frame_t *frame, void *routing_handle)
 {
     (void)handle;
-    (void)frame;
     (void)routing_handle;
-    /* NOTE: Overwrite in application-specific library */
+    AMFITRACK &AMFITRACK = AMFITRACK::getInstance();
+    // Wire layout: [payloadID(1)] [index(u16 LE)] [category(u8)] [uid(u32 LE)] [name...]
+    if (frame->header.length < 1 + 2 + 1 + 4 + 1)
+        return;
+    uint16_t index;
+    uint8_t category;
+    uint32_t uid;
+    memcpy(&index, &frame->payload[1], sizeof(index));
+    memcpy(&category, &frame->payload[3], sizeof(category));
+    memcpy(&uid, &frame->payload[4], sizeof(uid));
+    const char *name = reinterpret_cast<const char *>(&frame->payload[8]);
+    size_t name_max = static_cast<size_t>(frame->header.length) - 8;
+    size_t name_len = strnlen(name, name_max);
+    AMFITRACK.onConfigNameAndUidReply(frame->header.source, index, category, uid, name, name_len);
 }
 
 void AmfiProt_API::libAmfiProt_handle_RequestConfigurationValueUID(void *handle, lib_AmfiProt_Frame_t *frame, void *routing_handle)
@@ -625,9 +902,19 @@ void AmfiProt_API::libAmfiProt_handle_RequestConfigurationValueUID(void *handle,
 void AmfiProt_API::libAmfiProt_handle_ConfigurationValueUID(void *handle, lib_AmfiProt_Frame_t *frame, void *routing_handle)
 {
     (void)handle;
-    (void)frame;
     (void)routing_handle;
-    /* NOTE: Overwrite in application-specific library */
+    AMFITRACK &AMFITRACK = AMFITRACK::getInstance();
+    // Wire layout: [payloadID(1)] [uid(u32 LE)] [value (type byte + variable data)]
+    if (frame->header.length < 1 + 4 + 1)
+        return;
+    uint32_t uid;
+    memcpy(&uid, &frame->payload[1], sizeof(uid));
+    lib_Generic_Parameter_Value_t value = {};
+    size_t value_bytes = static_cast<size_t>(frame->header.length) - 5;
+    if (value_bytes > sizeof(value))
+        value_bytes = sizeof(value);
+    memcpy(&value, &frame->payload[5], value_bytes);
+    AMFITRACK.onConfigValueUidReply(frame->header.source, uid, value);
 }
 
 void AmfiProt_API::libAmfiProt_handle_SetConfigurationValueUID(void *handle, lib_AmfiProt_Frame_t *frame, void *routing_handle)
@@ -665,9 +952,11 @@ void AmfiProt_API::libAmfiProt_handle_RequestConfigurationValueCount(void *handl
 void AmfiProt_API::libAmfiProt_handle_ConfigurationValueCount(void *handle, lib_AmfiProt_Frame_t *frame, void *routing_handle)
 {
     (void)handle;
-    (void)frame;
     (void)routing_handle;
-    /* NOTE: Overwrite in application-specific library */
+    AMFITRACK &AMFITRACK = AMFITRACK::getInstance();
+    lib_AmfiProt_ConfigValueCount_t payload = {};
+    memcpy(&payload, &frame->payload[0], sizeof(payload));
+    AMFITRACK.onConfigCountReply(frame->header.source, payload.count);
 }
 
 void AmfiProt_API::libAmfiProt_handle_RequestCategoryCount(void *handle, lib_AmfiProt_Frame_t *frame, void *routing_handle)

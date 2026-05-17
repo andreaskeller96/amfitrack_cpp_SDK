@@ -444,7 +444,10 @@ void lib_AmfiProt::lib_AmfiProt_ProcessFrame(void *handle, lib_AmfiProt_Frame_t 
                 break;
                 case lib_AmfiProt_PayloadID_ReplyConfigurationNameAndUID:
                 {
-                    if (frame->header.length == sizeof(lib_AmfiProt_ConfigNameUID_common_t))
+                    // Wire payload is {payloadID, index, ConfigNameUID_common}; name may be truncated.
+                    size_t min_size = sizeof(uint8_t) + sizeof(uint16_t) + sizeof(uint8_t) + sizeof(uint32_t) + 1;
+                    size_t max_size = sizeof(lib_AmfiProt_ConfigNameUID_protocol_t);
+                    if (frame->header.length >= min_size && frame->header.length <= max_size)
                     {
                         this->libAmfiProt_handle_ConfigurationNameAndUID(handle, frame, routing_handle);
                     }
@@ -468,7 +471,10 @@ void lib_AmfiProt::lib_AmfiProt_ProcessFrame(void *handle, lib_AmfiProt_Frame_t 
                 break;
                 case lib_AmfiProt_PayloadID_ReplyConfigurationValueUID:
                 {
-                    if (frame->header.length == sizeof(lib_AmfiProt_ConfigValue_t))
+                    // Wire payload is {payloadID, uid, value}; value is variable-length per type.
+                    size_t max_size = sizeof(lib_AmfiProt_ConfigValueUID_t);
+                    size_t min_size = max_size - sizeof(lib_Generic_Parameter_Value_t) + sizeof_member(lib_Generic_Parameter_Value_t, type);
+                    if (frame->header.length >= min_size && frame->header.length <= max_size)
                     {
                         this->libAmfiProt_handle_ConfigurationValueUID(handle, frame, routing_handle);
                     }

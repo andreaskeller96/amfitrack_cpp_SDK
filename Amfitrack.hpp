@@ -22,6 +22,8 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <vector>
+#include <chrono>
 #include "src/project_conf.h"
 #include "lib/amfiprotapi/lib_AmfiProt_API.hpp"
 #ifdef USE_THREAD_BASED
@@ -37,6 +39,28 @@ namespace AMFITRACK_API
 #define MAX_NAME_LENGTH 64
 #define MAX_NUMBER_OF_DEVICES 254
 #define UUID_LENGTH 24
+#define CONFIG_PARAM_NAME_LENGTH 46
+
+//-----------------------------------------------------------------------------
+// Configuration enumeration types
+//-----------------------------------------------------------------------------
+struct ConfigParameter
+{
+    uint32_t uid;
+    uint8_t category;
+    char name[CONFIG_PARAM_NAME_LENGTH];
+    lib_Generic_Parameter_Value_t value;
+    bool name_received;
+    bool value_received;
+};
+
+enum class ConfigEnumStatus : uint8_t
+{
+    Idle,
+    InProgress,
+    Complete,
+    Failed,
+};
 
 //-----------------------------------------------------------------------------
 // Type declarations
@@ -99,6 +123,24 @@ public:
     void setDeviceType(uint8_t DeviceID, DeviceType type);
     DeviceType getDeviceType(uint8_t DeviceID);
 
+    /* Kick off async enumeration of every configuration parameter on a device.
+     * Returns false if the device is not active or enumeration is already in progress. */
+    bool requestFullConfiguration(uint8_t DeviceID);
+
+    /* Returns the current enumeration status for a device. */
+    ConfigEnumStatus getConfigurationStatus(uint8_t DeviceID);
+
+    /* Copies out the enumerated parameters when status is Complete. Returns false otherwise. */
+    bool getFullConfiguration(uint8_t DeviceID, std::vector<ConfigParameter> &out);
+
+    /* Internal hooks for reply handlers. Public so AmfiProt_API overrides can reach them. */
+    void onConfigCountReply(uint8_t DeviceID, uint16_t count);
+    void onConfigNameAndUidReply(uint8_t DeviceID, uint16_t index, uint8_t category, uint32_t uid, const char *name, size_t name_len);
+    void onConfigValueUidReply(uint8_t DeviceID, uint32_t uid, const lib_Generic_Parameter_Value_t &value);
+
+    /* Drives timeouts/retries for enumeration. Called by amfitrack_main_loop / background task. */
+    void processConfigurationEnumeration();
+
 
 #if defined(_WIN32) || defined(__linux__) || defined(__APPLE__)
     void setSensorTimestamp(uint8_t DeviceID, std::chrono::steady_clock::time_point time_stamp);
@@ -150,6 +192,30 @@ private:
 
     static void background_amfitrack_task(AMFITRACK *);
     bool checkDeviceDisconnected(uint8_t DeviceID);
+
+    enum class ConfigWaitingFor : uint8_t { Nothing, Count, NameAndUid, Value };
+
+    struct ConfigEnumState
+    {
+        ConfigEnumStatus status;
+        ConfigWaitingFor waiting_for;
+        uint16_t expected_count;
+        uint16_t pending_index;     // index of name+uid request OR of param whose value we're requesting
+        uint32_t pending_uid;       // uid currently being requested
+        uint8_t retry_count;
+        std::chrono::steady_clock::time_point last_request_time;
+        std::vector<ConfigParameter> parameters;
+    };
+
+    void sendCountRequest(uint8_t DeviceID);
+    void sendNameAndUidRequest(uint8_t DeviceID, uint16_t index);
+    void sendValueRequest(uint8_t DeviceID, uint32_t uid);
+    void failEnumeration(ConfigEnumState &st);
+
+#ifdef USE_THREAD_BASED
+    std::mutex mutConfigEnum;
+#endif
+    ConfigEnumState ConfigEnumStates[MAX_NUMBER_OF_DEVICES];
 
     AMFITRACK();
     ~AMFITRACK();
