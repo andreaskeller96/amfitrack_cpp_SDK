@@ -64,8 +64,6 @@ void AMFITRACK::background_amfitrack_task(AMFITRACK *inst)
 	while (!stop_running)
 	{
 		_run_all_amfitrack();
-
-		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
 }
 

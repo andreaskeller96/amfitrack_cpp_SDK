@@ -10,6 +10,7 @@
 #include "AmfitrackDeviceTypes.h"
 #include "lib_AmfiProt.hpp"
 
+#include <chrono>
 #include <cstdint>
 
 #ifdef USE_THREAD_BASED
@@ -79,6 +80,7 @@ class AMFITRACK_Config
 	bool request_name_by_uid();
 	bool request_value_by_uid();
 
+	void set_waiting_for_reply(bool waiting);
 	bool select_next_config(DeviceConfig_t const &config);
 	bool is_active(uint8_t device_id, ConfigDiscoveryState_t state) const;
 	void advance_to_value_count(DeviceConfig_t const &config);
@@ -96,4 +98,5 @@ class AMFITRACK_Config
 	uint16_t _config_index = 0U;
 	bool _force_all_config = false;
 	bool _waiting_for_reply = false;
+	std::chrono::steady_clock::time_point _last_request_time{};
 };

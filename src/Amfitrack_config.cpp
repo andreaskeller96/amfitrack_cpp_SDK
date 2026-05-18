@@ -17,6 +17,7 @@
 #include "lib_log.h"
 
 #include <algorithm>
+#include <chrono>
 #include <cstddef>
 #include <cstring>
 #include <limits>
@@ -49,6 +50,7 @@ constexpr uint8_t kAllConfigCategory = static_cast<uint8_t>(lib_AmfiProt_ConfigC
 constexpr char kAllConfigCategoryName[] = "All";
 constexpr std::size_t kMaxStoredCategories = std::numeric_limits<uint8_t>::max();
 constexpr std::size_t kMaxStoredConfigs = std::numeric_limits<uint16_t>::max();
+constexpr std::chrono::seconds kConfigReplyTimeout(1);
 
 void copy_payload_name(char *dest, std::size_t dest_size, char const *src, std::size_t src_size)
 {
@@ -270,7 +272,7 @@ bool AMFITRACK_Config::start(uint8_t device_id, bool force_all)
 	_category_index = force_all ? static_cast<uint8_t>(all_config_storage_index(config)) : 0U;
 	_config_index = 0U;
 	_force_all_config = force_all;
-	_waiting_for_reply = false;
+	set_waiting_for_reply(false);
 
 	return request_current();
 }
@@ -343,7 +345,7 @@ bool AMFITRACK_Config::set(uint8_t device_id, lib_AmfiProt_ConfigCategoryCount_t
 		_state = CONFIG_DISCOVERY_CATEGORY_NAMES;
 		_category_index = 0U;
 		_config_index = 0U;
-		_waiting_for_reply = false;
+		set_waiting_for_reply(false);
 
 		if (config.categoryCount == 0U)
 		{
@@ -386,7 +388,7 @@ bool AMFITRACK_Config::set(uint8_t device_id, lib_AmfiProt_ConfigCategory_t cons
 	if (stored && is_active(device_id, CONFIG_DISCOVERY_CATEGORY_NAMES) && (category.categoryIndex == _category_index))
 	{
 		_category_index++;
-		_waiting_for_reply = false;
+		set_waiting_for_reply(false);
 		LOG_D("set(Category): category name stored, advancing to category_index=%u", _category_index);
 
 		if (_category_index >= config.categoryCount)
@@ -452,7 +454,7 @@ bool AMFITRACK_Config::set(uint8_t device_id, lib_AmfiProt_ConfigValueCount_t co
 		{
 			_category_index++;
 		}
-		_waiting_for_reply = false;
+		set_waiting_for_reply(false);
 		LOG_D("set(ValueCount): value count stored, advancing to category_index=%u", _category_index);
 
 		if (_category_index >= config.categoryCount)
@@ -517,7 +519,7 @@ bool AMFITRACK_Config::set(uint8_t device_id, lib_AmfiProt_ConfigNameUID_protoco
 		(_force_all_config || (category_index == _category_index)) && (config_index == _config_index))
 	{
 		_config_index++;
-		_waiting_for_reply = false;
+		set_waiting_for_reply(false);
 		LOG_D("set(NameUID): name stored, advancing to config_index=%u", _config_index);
 
 		if (!select_next_config(config))
@@ -578,7 +580,7 @@ bool AMFITRACK_Config::set(uint8_t device_id, lib_AmfiProt_ConfigValueUID_t cons
 		(config.categories[_category_index].configs[_config_index].uid == config_value.uid))
 	{
 		_config_index++;
-		_waiting_for_reply = false;
+		set_waiting_for_reply(false);
 		LOG_D("set(ValueUID): value stored, advancing to config_index=%u", _config_index);
 
 		if (!select_next_config(config))
@@ -597,8 +599,15 @@ bool AMFITRACK_Config::request_current()
 {
 	if (_waiting_for_reply)
 	{
-		LOG_D("request_current: waiting for reply, skipping (state=%d)", (int)_state);
-		return true;
+		const auto now = std::chrono::steady_clock::now();
+		if ((_last_request_time != std::chrono::steady_clock::time_point{}) &&
+			((now - _last_request_time) < kConfigReplyTimeout))
+		{
+			return true;
+		}
+
+		LOG_W("request_current: no reply within 1s, resending last request (state=%d)", (int)_state);
+		set_waiting_for_reply(false);
 	}
 
 	switch (_state)
@@ -629,7 +638,7 @@ bool AMFITRACK_Config::request_category_count()
 	{
 		LOG_W("request_category_count: failed to queue frame for device_id=%u", _device_id);
 	}
-	_waiting_for_reply = queued;
+	set_waiting_for_reply(queued);
 	return queued;
 }
 
@@ -656,7 +665,7 @@ bool AMFITRACK_Config::request_category_name()
 	{
 		LOG_W("request_category_name: failed to queue frame for category_index=%u", _category_index);
 	}
-	_waiting_for_reply = queued;
+	set_waiting_for_reply(queued);
 	return queued;
 }
 
@@ -692,7 +701,7 @@ bool AMFITRACK_Config::request_value_count()
 	{
 		LOG_W("request_value_count: failed to queue frame for category=%u", request_category);
 	}
-	_waiting_for_reply = queued;
+	set_waiting_for_reply(queued);
 	return queued;
 }
 
@@ -724,7 +733,7 @@ bool AMFITRACK_Config::request_name_by_uid()
 			  request_category,
 			  _config_index);
 	}
-	_waiting_for_reply = queued;
+	set_waiting_for_reply(queued);
 	return queued;
 }
 
@@ -753,8 +762,14 @@ bool AMFITRACK_Config::request_value_by_uid()
 	{
 		LOG_W("request_value_by_uid: failed to queue frame for uid=%u", uid);
 	}
-	_waiting_for_reply = queued;
+	set_waiting_for_reply(queued);
 	return queued;
+}
+
+void AMFITRACK_Config::set_waiting_for_reply(bool waiting)
+{
+	_waiting_for_reply = waiting;
+	_last_request_time = waiting ? std::chrono::steady_clock::now() : std::chrono::steady_clock::time_point{};
 }
 
 bool AMFITRACK_Config::select_next_config(DeviceConfig_t const &config)
@@ -784,7 +799,7 @@ void AMFITRACK_Config::advance_to_value_count(DeviceConfig_t const &config)
 	_state = CONFIG_DISCOVERY_VALUE_COUNT;
 	_category_index = _force_all_config ? static_cast<uint8_t>(all_config_storage_index(config)) : 0U;
 	_config_index = 0U;
-	_waiting_for_reply = false;
+	set_waiting_for_reply(false);
 }
 
 void AMFITRACK_Config::advance_to_names_by_uid(DeviceConfig_t const &config)
@@ -793,7 +808,7 @@ void AMFITRACK_Config::advance_to_names_by_uid(DeviceConfig_t const &config)
 	_state = CONFIG_DISCOVERY_NAMES_BY_UID;
 	_category_index = _force_all_config ? static_cast<uint8_t>(all_config_storage_index(config)) : 0U;
 	_config_index = 0U;
-	_waiting_for_reply = false;
+	set_waiting_for_reply(false);
 
 	if (!select_next_config(config))
 	{
@@ -808,7 +823,7 @@ void AMFITRACK_Config::advance_to_values_by_uid(DeviceConfig_t const &config)
 	_state = CONFIG_DISCOVERY_VALUES_BY_UID;
 	_category_index = _force_all_config ? static_cast<uint8_t>(all_config_storage_index(config)) : 0U;
 	_config_index = 0U;
-	_waiting_for_reply = false;
+	set_waiting_for_reply(false);
 
 	if (!select_next_config(config))
 	{
@@ -939,7 +954,7 @@ void AMFITRACK_Config::finish()
 	_category_index = 0U;
 	_config_index = 0U;
 	_force_all_config = false;
-	_waiting_for_reply = false;
+	set_waiting_for_reply(false);
 
 	print_config(_device_id);
 }
