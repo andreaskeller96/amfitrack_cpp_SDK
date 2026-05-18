@@ -63,5 +63,6 @@ class AMFITRACK_Source
 	Voltage_t voltage;
 	Calibration_t calibration;
 
+	// Last time a message is received from the device
 	uint32_t lastTimeSeenMs;
 };

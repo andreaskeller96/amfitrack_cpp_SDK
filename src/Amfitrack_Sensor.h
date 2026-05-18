@@ -76,5 +76,6 @@ class AMFITRACK_Sensor
 	// Deprecated!
 	lib_AmfiProt_Amfitrack_Sensor_Measurement_t sensorMeasurement;
 
+	// Last time a message is received from the device
 	uint32_t lastTimeSeenMs;
 };
