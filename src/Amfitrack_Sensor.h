@@ -65,6 +65,9 @@ class AMFITRACK_Sensor
 
 	Pose_t pose;
 	IMU_t imu;
+	Raw_B_Field_t rawBfield;
+	Normalized_B_Field_t normBfield;
+	Raw_with_Phase_B_Field_t rawWithPhaseBfield;
 
 #if defined(_WIN32) || defined(__linux__) || defined(__APPLE__)
 	std::chrono::steady_clock::time_point timestamp;

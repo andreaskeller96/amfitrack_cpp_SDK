@@ -70,48 +70,64 @@ typedef struct
 //-----------------------------------------------------------------------------
 typedef struct
 {
-	float Position_X; // in meter
-	float Position_Y;
-	float Position_Z;
-	float Orientation_X;
-	float Orientation_Y;
-	float Orientation_Z;
-	float Orientation_W;
+	float Position_X;	 // In meter
+	float Position_Y;	 // In meter
+	float Position_Z;	 // In meter
+	float Orientation_X; // In quaternion
+	float Orientation_Y; // In quaternion
+	float Orientation_Z; // In quaternion
+	float Orientation_W; // In quaternion
 } Pose_t;
 
 typedef struct
 {
-	float Acceleration_X;
-	float Acceleration_Y;
-	float Acceleration_Z;
-	float Rotation_X;
-	float Rotation_Y;
-	float Rotation_Z;
+	float Acceleration_X; // In g
+	float Acceleration_Y; // In g
+	float Acceleration_Z; // In g
+	float Rotation_X;	  // In radian per second
+	float Rotation_Y;	  // In radian per second
+	float Rotation_Z;	  // In radian per second
 } IMU_t;
+
+typedef struct
+{
+	float bfield[9]; // In raw ADC count
+} Raw_B_Field_t;
+
+typedef struct
+{
+	float bfield[9]; // In calibrated value
+} Normalized_B_Field_t;
+
+typedef struct
+{
+	float bfield[9]; // In raw ADC count
+	float phase[9];
+} Raw_with_Phase_B_Field_t;
 
 //-----------------------------------------------------------------------------
 // Source struct types
 //-----------------------------------------------------------------------------
 typedef struct
 {
-	float Current_X;
-	float Current_Y;
-	float Current_Z;
+	float Current_X; // In Amp
+	float Current_Y; // In Amp
+	float Current_Z; // In Amp
 } Current_t;
 
 typedef struct
 {
-	float Voltage_X;
-	float Voltage_Y;
-	float Voltage_Z;
-	float Voltage_Boost;
+	float Voltage_X;	 // In Voltage
+	float Voltage_Y;	 // In Voltage
+	float Voltage_Z;	 // In Voltage
+	float Voltage_Boost; // In Voltage
 } Voltage_t;
 
 typedef struct
 {
-	float Frequency_X;
-	float Frequency_Y;
-	float Frequency_Z;
+	float Frequency_X; // In Hz
+	float Frequency_Y; // In Hz
+	float Frequency_Z; // In Hz
 } Frequency_t;
 
 typedef struct

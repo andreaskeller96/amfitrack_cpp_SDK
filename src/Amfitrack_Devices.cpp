@@ -308,6 +308,54 @@ bool AMFITRACK_Devices::set(uint8_t device_id, IMU_t const &imu)
 	return true;
 }
 
+bool AMFITRACK_Devices::set(uint8_t device_id, Raw_B_Field_t const &rawBfield)
+{
+	if (!is_valid_device_id(device_id))
+	{
+		return false;
+	}
+
+#ifdef USE_THREAD_BASED
+	const std::lock_guard<std::mutex> lock(_mutex);
+#endif
+
+	_sensors[device_id].rawBfield = rawBfield;
+	update_last_seen(device_id, true, false);
+	return true;
+}
+
+bool AMFITRACK_Devices::set(uint8_t device_id, Normalized_B_Field_t const &normBfield)
+{
+	if (!is_valid_device_id(device_id))
+	{
+		return false;
+	}
+
+#ifdef USE_THREAD_BASED
+	const std::lock_guard<std::mutex> lock(_mutex);
+#endif
+
+	_sensors[device_id].normBfield = normBfield;
+	update_last_seen(device_id, true, false);
+	return true;
+}
+
+bool AMFITRACK_Devices::set(uint8_t device_id, Raw_with_Phase_B_Field_t const &rawWithPhaseBfield)
+{
+	if (!is_valid_device_id(device_id))
+	{
+		return false;
+	}
+
+#ifdef USE_THREAD_BASED
+	const std::lock_guard<std::mutex> lock(_mutex);
+#endif
+
+	_sensors[device_id].rawWithPhaseBfield = rawWithPhaseBfield;
+	update_last_seen(device_id, true, false);
+	return true;
+}
+
 bool AMFITRACK_Devices::set(uint8_t device_id, lib_AmfiProt_Amfitrack_Sensor_Measurement_t const &sensorMeasurement)
 {
 	if (!is_valid_device_id(device_id))

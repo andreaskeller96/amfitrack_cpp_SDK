@@ -65,9 +65,9 @@ void AmfiProt_API::lib_AmfiProt_Amfitrack_handle_SourceMeasurement(void *handle,
 	uint8_t _deviceID = frame->header.source;
 	Current_t cur;
 	Voltage_t vol;
-	cur.Current_X = sourceMeasurement.current_coil_x_in_mA * 1000;
-	cur.Current_Y = sourceMeasurement.current_coil_y_in_mA * 1000;
-	cur.Current_Z = sourceMeasurement.current_coil_z_in_mA * 1000;
+	cur.Current_X = sourceMeasurement.current_coil_x_in_mA / 1000;
+	cur.Current_Y = sourceMeasurement.current_coil_y_in_mA / 1000;
+	cur.Current_Z = sourceMeasurement.current_coil_z_in_mA / 1000;
 
 	vol.Voltage_X = sourceMeasurement.voltage_coil_x_in_V;
 	vol.Voltage_Y = sourceMeasurement.voltage_coil_y_in_V;
@@ -94,9 +94,9 @@ void AmfiProt_API::lib_AmfiProt_Amfitrack_handle_SensorMeasurement(void *handle,
 	Pose_t pose = { tempPose.position_x_in_m, tempPose.position_y_in_m, tempPose.position_z_in_m, tempPose.orientation_x, tempPose.orientation_y, tempPose.orientation_z, tempPose.orientation_w };
 	AMFITRACK_Devices::getInstance().set(_deviceID, pose);
 	IMU_t imu;
-	imu.Acceleration_X = tempIMU.acceleration_x_in_mg * 1000;
-	imu.Acceleration_Y = tempIMU.acceleration_y_in_mg * 1000;
-	imu.Acceleration_Z = tempIMU.acceleration_z_in_mg * 1000;
+	imu.Acceleration_X = tempIMU.acceleration_x_in_mg / 1000;
+	imu.Acceleration_Y = tempIMU.acceleration_y_in_mg / 1000;
+	imu.Acceleration_Z = tempIMU.acceleration_z_in_mg / 1000;
 	imu.Rotation_X = tempIMU.rotation_x_in_rad_per_sec;
 	imu.Rotation_Y = tempIMU.rotation_y_in_rad_per_sec;
 	imu.Rotation_Z = tempIMU.rotation_z_in_rad_per_sec;
@@ -106,25 +106,37 @@ void AmfiProt_API::lib_AmfiProt_Amfitrack_handle_SensorMeasurement(void *handle,
 void AmfiProt_API::lib_AmfiProt_Amfitrack_handle_RawBfield(void *handle, lib_AmfiProt_Frame_t *frame, void *routing_handle)
 {
 	(void)handle;
-	(void)frame;
 	(void)routing_handle;
-	/* NOTE: Overwrite in application-specific library */
+	uint8_t _deviceID = frame->header.source;
+	lib_AmfiProt_Amfitrack_Sensor_BField_t bfield;
+	memcpy(&bfield, &frame->payload[0], sizeof(lib_AmfiProt_Amfitrack_Sensor_BField_t));
+	Raw_B_Field_t rawBfield;
+	memcpy(&rawBfield.bfield, bfield.bfield, sizeof(bfield.bfield));
+	AMFITRACK_Devices::getInstance().set(_deviceID, rawBfield);
 }
 
 void AmfiProt_API::lib_AmfiProt_Amfitrack_handle_NormalizedBfield(void *handle, lib_AmfiProt_Frame_t *frame, void *routing_handle)
 {
 	(void)handle;
-	(void)frame;
 	(void)routing_handle;
-	/* NOTE: Overwrite in application-specific library */
+	uint8_t _deviceID = frame->header.source;
+	lib_AmfiProt_Amfitrack_Sensor_BField_t bfield;
+	memcpy(&bfield, &frame->payload[0], sizeof(lib_AmfiProt_Amfitrack_Sensor_BField_t));
+	Normalized_B_Field_t normBfield;
+	memcpy(&normBfield.bfield, bfield.bfield, sizeof(bfield.bfield));
+	AMFITRACK_Devices::getInstance().set(_deviceID, normBfield);
 }
 
 void AmfiProt_API::lib_AmfiProt_Amfitrack_handle_BfieldPhase(void *handle, lib_AmfiProt_Frame_t *frame, void *routing_handle)
 {
 	(void)handle;
-	(void)frame;
 	(void)routing_handle;
-	/* NOTE: Overwrite in application-specific library */
+	uint8_t _deviceID = frame->header.source;
+	lib_AmfiProt_Amfitrack_Sensor_BField_With_Phase_t bfield;
+	memcpy(&bfield, &frame->payload[0], sizeof(lib_AmfiProt_Amfitrack_Sensor_BField_With_Phase_t));
+	Raw_with_Phase_B_Field_t rawWithPhaseBfield;
+	memcpy(&rawWithPhaseBfield.bfield, bfield.bfield, sizeof(bfield.bfield));
+	AMFITRACK_Devices::getInstance().set(_deviceID, rawWithPhaseBfield);
 }
 
 void AmfiProt_API::lib_AmfiProt_Amfitrack_handle_NormalizedBfieldImu(void *handle, lib_AmfiProt_Frame_t *frame, void *routing_handle)
