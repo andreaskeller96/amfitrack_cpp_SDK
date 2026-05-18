@@ -302,7 +302,7 @@ ConfigDiscoveryState_t AMFITRACK_Config::state(uint8_t device_id) const
 
 bool AMFITRACK_Config::setConfiguration(uint8_t DeviceID, uint32_t UID, lib_Generic_Parameter_Value_t parameter)
 {
-	if (AMFITRACK_Devices::getInstance().is_device_active(DeviceID))
+	if (!AMFITRACK_Devices::getInstance().is_device_active(DeviceID))
 	{
 		LOG_W("setConfiguration: Device not active: %u", DeviceID);
 	}
