@@ -9,6 +9,7 @@
 #ifdef __cplusplus
 #include <cstddef>
 #include <cstdint>
+#include <vector>
 
 #include "lib_Generic_Parameter.h"
 
@@ -55,13 +56,13 @@ typedef struct
 	uint8_t index;
 	char name[52];
 	uint16_t configCount;
-	ConfigEntry_t configs[50]; // Need a way to not have it on stack?
+	std::vector<ConfigEntry_t> configs;
 } CategoryEntry_t;
 
 typedef struct
 {
 	uint8_t categoryCount;
-	CategoryEntry_t categories[20];
+	std::vector<CategoryEntry_t> categories;
 } DeviceConfig_t;
 
 //-----------------------------------------------------------------------------

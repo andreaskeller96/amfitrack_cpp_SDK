@@ -135,6 +135,24 @@ bool AMFITRACK_Devices::get_source(uint8_t device_id, AMFITRACK_Source *source) 
 	return true;
 }
 
+bool AMFITRACK_Devices::is_device_active(uint8_t device_id)
+{
+	if (!is_valid_device_id(device_id))
+	{
+		return false;
+	}
+
+	bool isActive = false;
+
+#ifdef USE_THREAD_BASED
+	const std::lock_guard<std::mutex> lock(_mutex);
+#endif
+
+	isActive = _sources[device_id].active;
+	isActive |= _sensors[device_id].active;
+	return isActive;
+}
+
 bool AMFITRACK_Devices::set(uint8_t device_id, bool isActive)
 {
 	if (!is_valid_device_id(device_id))

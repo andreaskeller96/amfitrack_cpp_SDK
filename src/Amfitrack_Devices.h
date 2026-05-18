@@ -53,6 +53,7 @@ class AMFITRACK_Devices
 
 	bool get_sensor(uint8_t device_id, AMFITRACK_Sensor *sensor) const;
 	bool get_source(uint8_t device_id, AMFITRACK_Source *source) const;
+	bool is_device_active(uint8_t device_id);
 
 	bool set(uint8_t device_id, bool isActive);
 	bool set(uint8_t device_id, char const *name, uint8_t length);

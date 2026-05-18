@@ -152,15 +152,9 @@ bool AMFITRACK::reset_source(uint8_t device_id)
 	return AMFITRACK_Devices::getInstance().reset_source(device_id);
 }
 
-void AMFITRACK::setConfiguration(uint8_t DeviceID, uint32_t UID, lib_Generic_Parameter_Value_t parameter)
+bool AMFITRACK::setConfiguration(uint8_t DeviceID, uint32_t UID, lib_Generic_Parameter_Value_t parameter)
 {
-	lib_AmfiProt_ConfigValueUID_t ConfigurationPayload = {};
-	ConfigurationPayload.payloadID = lib_AmfiProt_PayloadID_SetConfigurationValueUID;
-	ConfigurationPayload.uid = UID;
-	ConfigurationPayload.value = parameter;
-	uint8_t payloadSize = sizeof(ConfigurationPayload) - sizeof(ConfigurationPayload.value) + lib_Generic_Parameter_SizeWithType(ConfigurationPayload.value);
-
-	amfiprot_api->queue_frame(&ConfigurationPayload, payloadSize, libAmfiProt_PayloadType_Common, lib_AmfiProt_packetType_NoAck, DeviceID);
+	return AMFITRACK_Config::getInstance().setConfiguration(DeviceID, UID, parameter);
 }
 
 bool AMFITRACK::getConfiguration(uint8_t DeviceID, bool force_all)

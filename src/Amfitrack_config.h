@@ -55,6 +55,7 @@ class AMFITRACK_Config
 	bool start(uint8_t device_id, bool force_all = false);
 	void run();
 	ConfigDiscoveryState_t state(uint8_t device_id) const;
+	bool setConfiguration(uint8_t DeviceID, uint32_t UID, lib_Generic_Parameter_Value_t parameter);
 
 	bool set(uint8_t device_id, lib_AmfiProt_ConfigCategoryCount_t const &category_count);
 	bool set(uint8_t device_id, lib_AmfiProt_ConfigCategory_t const &category);
