@@ -33,15 +33,7 @@
 #include <thread>
 #endif
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif
-#include "lib_CRC.h"
-
-#ifdef __cplusplus
-}
-#endif // __cplusplus
+#include "lib_CRC.hpp"
 
 //-----------------------------------------------------------------------------
 // Defines

@@ -1,43 +1,32 @@
 //-----------------------------------------------------------------------------
+//
 //                              AMFITECH APS
+//
 //                          ALL RIGHTS RESERVED
 //
-// $URL: $
-// $Rev: $
-// $Date: $
-// $Author: $
-//
 //-----------------------------------------------------------------------------
 
 //-----------------------------------------------------------------------------
-// Includes
+// Section: Includes
 //-----------------------------------------------------------------------------
-/// \cond
-#include <stddef.h>
-#include <stdint.h>
-#include <stdbool.h>
-#include <assert.h>
-/// \endcond
-
-#include "lib_CRC.h"
-
+#include "lib_CRC.hpp"
+#include <array>
 //-----------------------------------------------------------------------------
-// Defines
+// Section: Define
 //-----------------------------------------------------------------------------
 
 //-----------------------------------------------------------------------------
-// Type declarations
+// Section: Typedef
 //-----------------------------------------------------------------------------
 
 //-----------------------------------------------------------------------------
-// Function prototypes
+// Section: Macro
 //-----------------------------------------------------------------------------
 
 //-----------------------------------------------------------------------------
-// Variables and constants
+// Section: Variables
 //-----------------------------------------------------------------------------
-// Polynomial: 0x2F (0x12F in python)
-static uint8_t const CRC8_Table[] = {
+static const uint_fast8_t crc8_table[256] = {
 	0x00,
 	0x2f,
 	0x5e,
@@ -295,30 +284,41 @@ static uint8_t const CRC8_Table[] = {
 	0x6d,
 	0x42,
 };
-#ifndef NRF52840_XXAA
-// static_assert(sizeof(CRC8_Table) == 256, "CRC8_Table does not have 256 elements");'
-#endif
 //-----------------------------------------------------------------------------
-// Functions
+// Section: Function prototypes
 //-----------------------------------------------------------------------------
-//-----------------------------------------------------------------------------
-// Function crc_update
-/**
- * Calculate CRC-8 checksum for *data
- * @param crc - initial crc register value
- * @return - crc value
- **/
-//-----------------------------------------------------------------------------
-uint8_t lib_CRC8_Update(uint8_t crc, void const *pData, size_t data_len)
-{
-	uint8_t const *d = (uint8_t const *)pData;
-	uint8_t tbl_idx;
 
-	while (data_len--)
+//-----------------------------------------------------------------------------
+// Section: Functions
+//-----------------------------------------------------------------------------
+void CRC8::crc(const void *data, uint32_t Len)
+{
+	if (data && Len)
 	{
-		tbl_idx = (crc ^ *d);
-		crc = (CRC8_Table[tbl_idx]) & 0xFF;
-		d++;
+		const uint8_t *d = (const uint8_t *)data;
+		uint32_t tbl_idx;
+
+		while (Len--)
+		{
+			tbl_idx = _crc ^ *d;
+			_crc = crc8_table[tbl_idx] & 0xff;
+			d++;
+		}
+		_crc = _crc & 0xff;
 	}
-	return crc & 0xFF;
+}
+
+void CRCBase::reset()
+{
+	_crc = 0;
+}
+
+uint8_t CRCBase::getCRC()
+{
+	return _crc;
+}
+
+CRCBase::CRCBase()
+{
+	reset();
 }

@@ -23,15 +23,7 @@
 
 #include "lib_AmfiProt.hpp"
 #include "lib_log.h"
-
-#ifdef __cplusplus
-extern "C"
-{
-#endif
-#include "../lib_crc/lib_CRC.h"
-#ifdef __cplusplus
-}
-#endif
+#include "lib_CRC.hpp"
 
 //-----------------------------------------------------------------------------
 // Defines
@@ -68,11 +60,15 @@ bool lib_AmfiProt::lib_AmfiProt_UpdateCRC(lib_AmfiProt_Frame_t *frame)
 
 	if (frame->header.length <= sizeof(frame->payload))
 	{
-		frame->header.headCRC = lib_CRC8_Update(0, &(frame->header), sizeof(frame->header) - 1);
+		CRC8 crc;
+		crc.crc(&(frame->header), sizeof(frame->header) - 1);
+		frame->header.headCRC = crc.getCRC();
 
 		if (frame->header.length > 0)
 		{
-			frame->payload[frame->header.length] = lib_CRC8_Update(0, frame->payload, frame->header.length);
+			crc.reset();
+			crc.crc(frame->payload, frame->header.length);
+			frame->payload[frame->header.length] = crc.getCRC();
 		}
 		retVal = true;
 	}
@@ -123,7 +119,9 @@ bool lib_AmfiProt::lib_AmfiProt_EncodeAck(lib_AmfiProt_Frame_t *incomingFrame, l
 	outgoingFrame->header.packetNumber = incomingFrame->header.packetNumber;
 	outgoingFrame->header.packetType = lib_AmfiProt_packetType_Ack;
 
-	outgoingFrame->header.headCRC = lib_CRC8_Update(0, &(outgoingFrame->header), sizeof(outgoingFrame->header) - 1);
+	CRC8 crc;
+	crc.crc(&(outgoingFrame->header), sizeof(outgoingFrame->header) - 1);
+	outgoingFrame->header.headCRC = crc.getCRC();
 
 	return retVal;
 }
@@ -145,24 +143,28 @@ bool lib_AmfiProt::lib_AmfiProt_DeserializeFrame(lib_AmfiProt_Frame_t *frame, vo
 		{
 			memcpy(frame, pData, length);
 		}
-		if (lib_CRC8_Update(0, &(frame->header), sizeof(frame->header) - 1) == frame->header.headCRC)
+		CRC8 crc;
+		crc.crc(&(frame->header), sizeof(frame->header) - 1);
+		if (crc.getCRC() == frame->header.headCRC)
 		{
 			if (frame->header.length <= (length - sizeof(frame->header)))
 			{
+				crc.reset();
+				crc.crc(frame->payload, frame->header.length);
 				if ((frame->header.length == 0) ||
-					(lib_CRC8_Update(0, frame->payload, frame->header.length) == frame->payload[frame->header.length]))
+					(crc.getCRC() == frame->payload[frame->header.length]))
 				{
 					retVal = true;
 				}
 				else
 				{
-					LOG_W("payloadCRC failed, was: 0x%02X, should have been: 0x%02X", lib_CRC8_Update(0, frame->payload, frame->header.length), frame->payload[frame->header.length]);
+					LOG_W("payloadCRC failed, was: 0x%02X, should have been: 0x%02X", crc.getCRC(), frame->payload[frame->header.length]);
 				}
 			}
 		}
 		else
 		{
-			LOG_W("headCRC failed, was: 0x%02X, should have been: 0x%02X", lib_CRC8_Update(0, &(frame->header), sizeof(frame->header) - 1), frame->header.headCRC);
+			LOG_W("headCRC failed, was: 0x%02X, should have been: 0x%02X", crc.getCRC(), frame->header.headCRC);
 		}
 	}
 
