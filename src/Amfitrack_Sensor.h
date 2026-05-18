@@ -63,6 +63,7 @@ class AMFITRACK_Sensor
 
 	hid_device *_dev_handle;
 
+	Status_t status;
 	Pose_t pose;
 	IMU_t imu;
 	Raw_B_Field_t rawBfield;

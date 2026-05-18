@@ -61,6 +61,7 @@ class AMFITRACK_Devices
 	bool set_hid(uint8_t device_id, hid_device *hidHandle, bool sensor);
 	bool set(uint8_t device_id, DeviceConfig_t const &config);
 
+	bool set(uint8_t device_id, Status_t const &status);
 	bool set(uint8_t device_id, Pose_t const &pose);
 	bool set(uint8_t device_id, IMU_t const &imu);
 	bool set(uint8_t device_id, Raw_B_Field_t const &rawBfield);

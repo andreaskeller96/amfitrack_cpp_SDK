@@ -70,6 +70,11 @@ typedef struct
 //-----------------------------------------------------------------------------
 typedef struct
 {
+	uint32_t Battery_SOC;
+} Status_t;
+
+typedef struct
+{
 	float Position_X;	 // In meter
 	float Position_Y;	 // In meter
 	float Position_Z;	 // In meter

@@ -273,6 +273,22 @@ bool AMFITRACK_Devices::set(uint8_t device_id, DeviceConfig_t const &config)
 	return true;
 }
 
+bool AMFITRACK_Devices::set(uint8_t device_id, Status_t const &status)
+{
+	if (!is_valid_device_id(device_id))
+	{
+		return false;
+	}
+
+#ifdef USE_THREAD_BASED
+	const std::lock_guard<std::mutex> lock(_mutex);
+#endif
+
+	_sensors[device_id].status = status;
+	update_last_seen(device_id, true, false);
+	return true;
+}
+
 bool AMFITRACK_Devices::set(uint8_t device_id, Pose_t const &pose)
 {
 	if (!is_valid_device_id(device_id))

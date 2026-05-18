@@ -54,6 +54,7 @@ typedef enum
 	//	lib_AmfiProt_Amfitrack_PayloadType_IMU = 0x18,                              // TODO: Remove
 	//	lib_AmfiProt_Amfitrack_PayloadType_IMU_Timestamp = 0x19,                    // TODO: Remove
 	lib_AmfiProt_Amfitrack_PayloadType_Sensor_Measurement = 0x1A, // lib_AmfiProt_Amfitrack_Sensor_Measurement_t
+	lib_AmfiProt_Amfitrack_PayloadType_Sensor_Status = 0x1B,	  // lib_AmfiProt_Amfitrack_Sensor_Status_t
 
 	//	lib_AmfiProt_Amfitrack_PayloadType_SetSendIMU = 0x20,                       // TODO: Remove
 	lib_AmfiProt_Amfitrack_PayloadType_SourceCoilCalData = 0x21,  // TODO: Remove
@@ -249,6 +250,21 @@ typedef __PACKED_STRUCT
 }
 lib_AmfiProt_Amfitrack_Sensor_Measurement_t;
 // static_assert(sizeof(lib_AmfiProt_Amfitrack_Sensor_Measurement_t) <= AmfiProtMaxPayloadLength, "lib_AmfiProt_Amfitrack_Sensor_Measurement_t larger than max payload size");
+
+/* New low rate sensor package, with more detailed status */
+/* Work in progress */
+typedef __PACKED_STRUCT
+{
+	/** Battery SOC (%) */
+	uint8_t bat_SOC;
+
+	/** rssi */
+	int8_t rssi;
+
+	/** Frame ID */
+	lib_AmfiProt_Amfitrack_FrameID_24b_t frame_id;
+}
+lib_AmfiProt_Amfitrack_Sensor_Status_t;
 
 /**
  * Source calibration package (PayloadType == 0x23)
@@ -470,6 +486,7 @@ class lib_AmfiProt_AmfiTrack
 		(void)frame;
 		(void)routing_handle;
 	};
+	virtual void lib_AmfiProt_Amfitrack_handle_SensorStatus(void *handle, lib_AmfiProt_Frame_t *frame, void *routing_handle) = 0;
 	virtual void lib_AmfiProt_Amfitrack_handle_RawBfield(void *handle, lib_AmfiProt_Frame_t *frame, void *routing_handle) = 0;
 	virtual void lib_AmfiProt_Amfitrack_handle_NormalizedBfield(void *handle, lib_AmfiProt_Frame_t *frame, void *routing_handle) = 0;
 	virtual void lib_AmfiProt_Amfitrack_handle_BfieldPhase(void *handle, lib_AmfiProt_Frame_t *frame, void *routing_handle) = 0;

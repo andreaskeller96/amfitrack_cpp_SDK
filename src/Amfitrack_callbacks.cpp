@@ -103,6 +103,18 @@ void AmfiProt_API::lib_AmfiProt_Amfitrack_handle_SensorMeasurement(void *handle,
 	AMFITRACK_Devices::getInstance().set(_deviceID, imu);
 }
 
+void AmfiProt_API::lib_AmfiProt_Amfitrack_handle_SensorStatus(void *handle, lib_AmfiProt_Frame_t *frame, void *routing_handle)
+{
+	(void)handle;
+	(void)routing_handle;
+	uint8_t _deviceID = frame->header.source;
+	lib_AmfiProt_Amfitrack_Sensor_Status_t SensorStatus;
+	memcpy(&SensorStatus, &frame->payload[0], sizeof(lib_AmfiProt_Amfitrack_Sensor_Status_t));
+	Status_t status;
+	status.Battery_SOC = SensorStatus.bat_SOC;
+	AMFITRACK_Devices::getInstance().set(_deviceID, status);
+}
+
 void AmfiProt_API::lib_AmfiProt_Amfitrack_handle_RawBfield(void *handle, lib_AmfiProt_Frame_t *frame, void *routing_handle)
 {
 	(void)handle;
