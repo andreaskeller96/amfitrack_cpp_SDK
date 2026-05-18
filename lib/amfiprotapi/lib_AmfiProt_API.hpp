@@ -68,9 +68,9 @@ class AmfiProt_API : public lib_AmfiProt, public lib_AmfiProt_AmfiTrack
 	bool deserialize_frame(void const *pData, uint8_t length);
 
 	bool isDataReadyForTransmit(size_t *QueueDataLength, uint8_t *TxID, void **TransmitData);
-	void set_transmit_ongoing_and_check_respons_request();
+	void set_transmit_ongoing_and_check_respons_request(bool removeFromQueue);
 
-	void isRequestAckSet();
+	void isRequestAckSet(bool removeFromQueue);
 	void clear_isTransmitting(lib_AmfiProt_Frame_t *frame);
 
 	void libAmfiProt_handle_RequestProcedureSpec(void *handle, lib_AmfiProt_Frame_t *frame, void *routing_handle) override;

@@ -87,9 +87,9 @@ void AMFITRACK::init()
 			return amfiprot_api->isDataReadyForTransmit(&len, &txId, &data);
 		};
 
-		cb.txDone = []()
+		cb.txDone = [](bool removeFromQueue)
 		{
-			amfiprot_api->set_transmit_ongoing_and_check_respons_request();
+			amfiprot_api->set_transmit_ongoing_and_check_respons_request(removeFromQueue);
 		};
 
 		cb.rxPush = [](uint8_t sourceAddress, const uint8_t *data, size_t len)

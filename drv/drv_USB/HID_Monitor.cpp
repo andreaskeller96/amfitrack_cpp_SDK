@@ -440,10 +440,11 @@ void HIDMonitor::drainTxQueue()
 	else
 	{
 		LOG_I("TxID %u not matched to any connected device", txId);
+		_cb.txDone(true);
 	}
 
 	if (sent)
-		_cb.txDone();
+		_cb.txDone(false);
 }
 
 void HIDMonitor::drainRx()

@@ -47,13 +47,19 @@ AmfiProt_API::~AmfiProt_API()
 {
 }
 
-void AmfiProt_API::isRequestAckSet()
+void AmfiProt_API::isRequestAckSet(bool removeFromQueue)
 {
 	// To check if its requesting an ack (Can it be done a better way?)
 	lib_AmfiProt_Frame_t amfiFrame;
 
 	if (!outgoingBulk_FiFo.peek(amfiFrame))
 	{
+		return;
+	}
+
+	if (removeFromQueue)
+	{
+		outgoingBulk_FiFo.pop(amfiFrame);
 		return;
 	}
 
@@ -157,10 +163,10 @@ bool AmfiProt_API::isDataReadyForTransmit(size_t *QueueDataLength, uint8_t *TxID
 	return true;
 }
 
-void AmfiProt_API::set_transmit_ongoing_and_check_respons_request()
+void AmfiProt_API::set_transmit_ongoing_and_check_respons_request(bool removeFromQueue)
 {
 	isTransmitting = true;
-	isRequestAckSet();
+	isRequestAckSet(removeFromQueue);
 }
 
 void AmfiProt_API::amfiprot_run(void)

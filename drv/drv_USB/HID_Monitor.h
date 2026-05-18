@@ -42,7 +42,7 @@ struct HIDMonitorCallbacks
 					   void *&dataOut)>
 		txPoll;
 
-	std::function<void()> txDone;
+	std::function<void(bool removeFromQueue)> txDone;
 
 	std::function<void(uint8_t sourceAddres, const uint8_t *data, size_t len)> rxPush;
 };
