@@ -22,6 +22,10 @@
 //-----------------------------------------------------------------------------
 #define AMFITRACK_DEVICE_COUNT 255
 #define AMFITRACK_BROADCAST_DEVICE_ID 255U
+
+#define AMFITRACK_FW_VERSION_ID 0
+#define AMFITRACK_RF_VERSION_ID 1
+#define AMFITRACK_HW_VERSION_ID 255
 //-----------------------------------------------------------------------------
 // Section: Typedef
 //-----------------------------------------------------------------------------
@@ -40,6 +44,7 @@
 
 class AMFITRACK_Devices
 {
+
   public:
 	static AMFITRACK_Devices &getInstance();
 
@@ -57,6 +62,10 @@ class AMFITRACK_Devices
 
 	bool set(uint8_t device_id, bool isActive);
 	bool set(uint8_t device_id, char const *name, uint8_t length);
+	bool set(uint8_t device_id, uint32_t UUID1, uint32_t UUID2, uint32_t UUID3);
+	bool set(uint8_t device_id, FW_t fwVersion);
+	bool set(uint8_t device_id, RF_t rfVersion);
+	bool set(uint8_t device_id, HW_t hwVersion);
 	bool set(uint8_t device_id, uint8_t hubId);
 	bool set_hid(uint8_t device_id, hid_device *hidHandle, bool sensor);
 	bool set(uint8_t device_id, DeviceConfig_t const &config);

@@ -511,7 +511,6 @@ HIDMonitor::findHandleByTxId(uint8_t txId)
 		AMFITRACK_Devices::getInstance().get_sensor(i, &s);
 		if (s.deviceId == txId)
 		{
-
 			if (!s._dev_handle)
 			{
 				AMFITRACK_Sensor hub;
@@ -525,18 +524,17 @@ HIDMonitor::findHandleByTxId(uint8_t txId)
 			{
 				hidHandle = s._dev_handle;
 			}
-			return hidHandle;
 		}
 	}
 	for (uint8_t i = 0; i < AMFITRACK_DEVICE_COUNT; i++)
 	{
 		AMFITRACK_Source s;
 		AMFITRACK_Devices::getInstance().get_source(i, &s);
-		if (s.deviceId == txId)
-			return s._dev_handle;
+		if (s.deviceId == txId && s._dev_handle)
+			hidHandle = s._dev_handle;
 	}
 
-	return nullptr;
+	return hidHandle;
 }
 
 int HIDMonitor::hidWrite(hid_device *dev, const void *data, size_t len)

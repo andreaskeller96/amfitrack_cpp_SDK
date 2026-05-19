@@ -624,6 +624,18 @@ void lib_AmfiProt::lib_AmfiProt_ProcessFrame(void *handle, lib_AmfiProt_Frame_t 
 						}
 					}
 					break;
+					case lib_AmfiProt_PayloadID_ReplyFirmwareVersionPerID:
+					{
+						if (frame->header.length == sizeof(lib_AmfiProt_FirmwareVersionPerID_t))
+						{
+							this->libAmfiProt_handle_ReplyFirmwareVersionPerID(handle, frame, routing_handle);
+						}
+						else
+						{
+							this->libAmfiProt_ReplyInvalid(handle, frame, routing_handle);
+						}
+					}
+					break;
 					case lib_AmfiProt_PayloadID_RequestProcedureSpec:
 					{
 						if (frame->header.length == sizeof(lib_AmfiProt_ProcedureSpecRequest_t))

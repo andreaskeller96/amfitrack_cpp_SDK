@@ -6,7 +6,6 @@
 //
 //-----------------------------------------------------------------------------
 #pragma once
-#ifdef __cplusplus
 #include <cstddef>
 #include <cstdint>
 #include <vector>
@@ -18,26 +17,26 @@
 //-----------------------------------------------------------------------------
 typedef struct
 {
-	uint8_t Major;
-	uint8_t Minor;
-	uint8_t Patch;
-	uint8_t Build;
+	uint32_t Major;
+	uint32_t Minor;
+	uint32_t Patch;
+	uint32_t Build;
 } FW_t;
 
 typedef struct
 {
-	uint8_t Major;
-	uint8_t Minor;
-	uint8_t Patch;
-	uint8_t Build;
+	uint32_t Major;
+	uint32_t Minor;
+	uint32_t Patch;
+	uint32_t Build;
 } RF_t;
 
 typedef struct
 {
-	uint8_t Generation;
-	uint8_t Version;
-	uint8_t SubVersion;
-	uint8_t Frequency;
+	uint32_t Generation;
+	uint32_t Version;
+	uint32_t SubVersion;
+	uint32_t Frequency;
 } HW_t;
 
 //-----------------------------------------------------------------------------
@@ -142,5 +141,4 @@ typedef struct
 	float Calibration_Z;
 } Calibration_t;
 
-#endif
 /** @} */ // end of module

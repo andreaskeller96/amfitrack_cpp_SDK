@@ -11,6 +11,7 @@
 //-----------------------------------------------------------------------------
 // Section: Includes
 //-----------------------------------------------------------------------------
+#include <cstdint>
 //-----------------------------------------------------------------------------
 // Section: Define
 //-----------------------------------------------------------------------------
@@ -32,6 +33,14 @@
 
 class amfitrack_task
 {
+	enum class missingInfo_t
+	{
+		missingInfo_FW,
+		missingInfo_RF,
+		missingInfo_HW,
+		missingInfo_Name,
+	};
+
   public:
 	static void init();
 	static void run();
@@ -39,6 +48,11 @@ class amfitrack_task
   private:
 	static void keepAlivePing();
 	static void checkDisconnected();
+
+	static void getVersion(uint8_t deviceID, uint8_t _version);
+	static void getName(uint8_t deviceID);
+	static void getMissingInfo();
+	static missingInfo_t missingInfo;
 };
 
 #endif

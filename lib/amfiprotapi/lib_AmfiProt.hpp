@@ -254,6 +254,7 @@ class lib_AmfiProt
 	virtual void libAmfiProt_handle_DebugOutput(void *handle, lib_AmfiProt_Frame_t *frame, void *routing_handle) = 0;
 	virtual void libAmfiProt_handle_ResetParameter(void *handle, lib_AmfiProt_Frame_t *frame, void *routing_handle) = 0;
 	virtual void libAmfiProt_handle_RequestFirmwareVersionPerID(void *handle, lib_AmfiProt_Frame_t *frame, void *routing_handle) = 0;
+	virtual void libAmfiProt_handle_ReplyFirmwareVersionPerID(void *handle, lib_AmfiProt_Frame_t *frame, void *routing_handle) = 0;
 	virtual void libAmfiProt_handle_AlternativeProcessing(void *handle, lib_AmfiProt_Frame_t *frame, void *routing_handle) = 0;
 
 	virtual void libAmfiProt_ReplyInvalid(void *handle, lib_AmfiProt_Frame_t *frame, void *routing_handle) = 0;

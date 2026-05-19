@@ -216,6 +216,79 @@ bool AMFITRACK_Devices::set(uint8_t device_id, char const *name, uint8_t length)
 	return true;
 }
 
+bool AMFITRACK_Devices::set(uint8_t device_id, uint32_t UUID1, uint32_t UUID2, uint32_t UUID3)
+{
+	if (!is_valid_device_id(device_id))
+	{
+		return false;
+	}
+
+#ifdef USE_THREAD_BASED
+	const std::lock_guard<std::mutex> lock(_mutex);
+#endif
+	_sensors[device_id].uuid[0] = UUID1;
+	_sensors[device_id].uuid[1] = UUID2;
+	_sensors[device_id].uuid[2] = UUID3;
+
+	_sources[device_id].uuid[0] = UUID1;
+	_sources[device_id].uuid[1] = UUID2;
+	_sources[device_id].uuid[2] = UUID3;
+
+	update_last_seen(device_id, true, true);
+	return true;
+}
+
+bool AMFITRACK_Devices::set(uint8_t device_id, FW_t fwVersion)
+{
+	if (!is_valid_device_id(device_id))
+	{
+		return false;
+	}
+
+#ifdef USE_THREAD_BASED
+	const std::lock_guard<std::mutex> lock(_mutex);
+#endif
+	_sensors[device_id].FW_Version = fwVersion;
+	_sources[device_id].FW_Version = fwVersion;
+
+	update_last_seen(device_id, true, true);
+	return true;
+}
+
+bool AMFITRACK_Devices::set(uint8_t device_id, RF_t rfVersion)
+{
+	if (!is_valid_device_id(device_id))
+	{
+		return false;
+	}
+
+#ifdef USE_THREAD_BASED
+	const std::lock_guard<std::mutex> lock(_mutex);
+#endif
+	_sensors[device_id].RF_Version = rfVersion;
+	_sources[device_id].RF_Version = rfVersion;
+
+	update_last_seen(device_id, true, true);
+	return true;
+}
+
+bool AMFITRACK_Devices::set(uint8_t device_id, HW_t hwVersion)
+{
+	if (!is_valid_device_id(device_id))
+	{
+		return false;
+	}
+
+#ifdef USE_THREAD_BASED
+	const std::lock_guard<std::mutex> lock(_mutex);
+#endif
+	_sensors[device_id].HW_Version = hwVersion;
+	_sources[device_id].HW_Version = hwVersion;
+
+	update_last_seen(device_id, true, true);
+	return true;
+}
+
 bool AMFITRACK_Devices::set(uint8_t device_id, uint8_t hubId)
 {
 	if (!is_valid_device_id(device_id))

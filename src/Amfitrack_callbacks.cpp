@@ -252,8 +252,11 @@ void AmfiProt_API::libAmfiProt_handle_RespondDeviceID(void *handle, lib_AmfiProt
 	(void)handle;
 	(void)routing_handle;
 	uint8_t _deviceID = frame->header.source;
+	lib_AmfiProt_DeviceID idFrame;
+	memcpy(&idFrame, frame->payload, sizeof(idFrame));
 
 	AMFITRACK_Devices::getInstance().set(_deviceID, true);
+	AMFITRACK_Devices::getInstance().set(_deviceID, idFrame.UUID[0], idFrame.UUID[1], idFrame.UUID[2]);
 }
 
 void AmfiProt_API::libAmfiProt_handle_SetTxID(void *handle, lib_AmfiProt_Frame_t *frame, void *routing_handle)
@@ -511,4 +514,41 @@ void AmfiProt_API::libAmfiProt_handle_RequestFirmwareVersionPerID(void *handle, 
 	(void)frame;
 	(void)routing_handle;
 	/* NOTE: Overwrite in application-specific library */
+}
+
+void AmfiProt_API::libAmfiProt_handle_ReplyFirmwareVersionPerID(void *handle, lib_AmfiProt_Frame_t *frame, void *routing_handle)
+{
+	(void)handle;
+	(void)routing_handle;
+	uint8_t _deviceID = frame->header.source;
+	lib_AmfiProt_FirmwareVersionPerID_t FirmwareVersion;
+	memcpy(&FirmwareVersion, frame->payload, sizeof(lib_AmfiProt_FirmwareVersionPerID_t));
+
+	switch (FirmwareVersion.processorID)
+	{
+		case 0:
+			FW_t fw;
+			fw.Major = FirmwareVersion.major;
+			fw.Minor = FirmwareVersion.minor;
+			fw.Patch = FirmwareVersion.patch;
+			fw.Build = FirmwareVersion.build;
+			AMFITRACK_Devices::getInstance().set(_deviceID, fw);
+			break;
+		case 1:
+			RF_t rf;
+			rf.Major = FirmwareVersion.major;
+			rf.Minor = FirmwareVersion.minor;
+			rf.Patch = FirmwareVersion.patch;
+			rf.Build = FirmwareVersion.build;
+			AMFITRACK_Devices::getInstance().set(_deviceID, rf);
+			break;
+		case 255:
+			HW_t hw;
+			hw.Generation = FirmwareVersion.major;
+			hw.Version = FirmwareVersion.minor;
+			hw.SubVersion = FirmwareVersion.patch;
+			hw.Frequency = FirmwareVersion.build;
+			AMFITRACK_Devices::getInstance().set(_deviceID, hw);
+			break;
+	}
 }
