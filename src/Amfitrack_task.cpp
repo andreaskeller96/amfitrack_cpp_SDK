@@ -160,6 +160,9 @@ void amfitrack_task::init()
 	amfiprot_api = &AmfiProt_API::getInstance();
 	lastKeepAlivePingTime = {};
 	lastGetMissingInfoTime = {};
+	const auto now = std::chrono::steady_clock::now();
+	lastKeepAlivePingTime = now;
+	lastGetMissingInfoTime = now;
 }
 
 void amfitrack_task::run()
