@@ -238,7 +238,7 @@ void AMFITRACK::getDeviceIMU(uint8_t DeviceID, lib_AmfiProt_Amfitrack_IMU_t *imu
     if (!getDeviceActive(DeviceID))
         return;
 #ifdef USE_THREAD_BASED
-    const std::lock_guard<std::mutex> lock(mutSensorMeasurements);
+    const std::lock_guard<std::mutex> lock(mutIMU);
 #endif // USE_THREAD_BASED
     memcpy(imuData, &IMUData[DeviceID], sizeof(lib_AmfiProt_Amfitrack_IMU_t));
 }
