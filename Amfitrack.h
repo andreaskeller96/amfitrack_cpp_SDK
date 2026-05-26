@@ -49,10 +49,10 @@ class AMFITRACK
 
 	bool get_sensor(uint8_t device_id, AMFITRACK_Sensor *sensor) const;
 	bool get_source(uint8_t device_id, AMFITRACK_Source *source) const;
-
-	void reset_devices();
-	bool reset_sensor(uint8_t device_id);
-	bool reset_source(uint8_t device_id);
+	bool get_sensor_by_number(uint8_t device_number, AMFITRACK_Sensor *sensor) const;
+	bool get_source_by_number(uint8_t device_number, AMFITRACK_Source *source) const;
+	uint8_t get_sensors_active() const;
+	uint8_t get_sources_active() const;
 
 	bool setConfiguration(uint8_t DeviceID, uint32_t UID, lib_Generic_Parameter_Value_t parameter);
 	bool getConfiguration(uint8_t DeviceID, bool force_all = false);

@@ -200,20 +200,20 @@ bool HIDMonitor::shutdown()
 #ifdef USE_THREAD_BASED
 	std::lock_guard<std::mutex> lock(_mutex);
 #endif
-	for (uint8_t i = 0; i < AMFITRACK_DEVICE_COUNT; i++)
+	for (uint8_t i = 0; i < AMFITRACK::getInstance().get_sensors_active(); i++)
 	{
 		AMFITRACK_Sensor s;
-		AMFITRACK::getInstance().get_sensor(i, &s);
+		AMFITRACK::getInstance().get_sensor_by_number(i, &s);
 		if (s._dev_handle)
 		{
 			hid_close(s._dev_handle);
 			s._dev_handle = nullptr;
 		}
 	}
-	for (uint8_t i = 0; i < AMFITRACK_DEVICE_COUNT; i++)
+	for (uint8_t i = 0; i < AMFITRACK::getInstance().get_sources_active(); i++)
 	{
 		AMFITRACK_Source s;
-		AMFITRACK::getInstance().get_source(i, &s);
+		AMFITRACK::getInstance().get_source_by_number(i, &s);
 		if (s._dev_handle)
 		{
 			hid_close(s._dev_handle);
@@ -245,10 +245,10 @@ bool isAlreadyOpen(uint16_t pid, const hid_device_info *info)
 {
 	if (pid == PID_Sensor)
 	{
-		for (uint8_t i = 0; i < AMFITRACK_DEVICE_COUNT; i++)
+		for (uint8_t i = 0; i < AMFITRACK::getInstance().get_sensors_active(); i++)
 		{
 			AMFITRACK_Sensor _sensors;
-			AMFITRACK::getInstance().get_sensor(i, &_sensors);
+			AMFITRACK::getInstance().get_sensor_by_number(i, &_sensors);
 			if (_sensors._dev_handle)
 			{
 				if (isSameDevice(_sensors._dev_handle, info))
@@ -260,10 +260,10 @@ bool isAlreadyOpen(uint16_t pid, const hid_device_info *info)
 	}
 	else if (pid == PID_Source)
 	{
-		for (uint8_t i = 0; i < AMFITRACK_DEVICE_COUNT; i++)
+		for (uint8_t i = 0; i < AMFITRACK::getInstance().get_sources_active(); i++)
 		{
 			AMFITRACK_Source _sources;
-			AMFITRACK::getInstance().get_source(i, &_sources);
+			AMFITRACK::getInstance().get_source_by_number(i, &_sources);
 			if (isSameDevice(_sources._dev_handle, info))
 			{
 				return true;
@@ -315,8 +315,8 @@ void HIDMonitor::scanForPid(uint16_t pid)
 
 			if (probeSensorIdentity(sensor))
 			{
-				AMFITRACK_Devices::getInstance().set(sensor.deviceId, true);
-				AMFITRACK_Devices::getInstance().set_hid(sensor.deviceId, sensor._dev_handle, true);
+				AMFITRACK_Devices::getInstance().set(sensor.deviceId, AMFITRACK_Devices::deviceType_t::Sensor, true);
+				AMFITRACK_Devices::getInstance().set_hid(sensor.deviceId, AMFITRACK_Devices::deviceType_t::Sensor, sensor._dev_handle);
 				LOG_I("Sensor connected on USB: id=%u name=%s", sensor.deviceId, sensor.name);
 				success = true;
 			}
@@ -328,8 +328,8 @@ void HIDMonitor::scanForPid(uint16_t pid)
 
 			if (probeSourceIdentity(source))
 			{
-				AMFITRACK_Devices::getInstance().set(source.deviceId, true);
-				AMFITRACK_Devices::getInstance().set_hid(source.deviceId, source._dev_handle, false);
+				AMFITRACK_Devices::getInstance().set(source.deviceId, AMFITRACK_Devices::deviceType_t::Source, true);
+				AMFITRACK_Devices::getInstance().set_hid(source.deviceId, AMFITRACK_Devices::deviceType_t::Source, source._dev_handle);
 				LOG_I("Source connected on USB: id=%u name=%s", source.deviceId, source.name);
 				success = true;
 			}
@@ -352,8 +352,8 @@ void HIDMonitor::removeDisconnected()
 		bool sourceDisconnected = false;
 		AMFITRACK_Sensor sensor;
 		AMFITRACK_Source source;
-		AMFITRACK_Devices::getInstance().get_sensor(i, &sensor);
-		AMFITRACK_Devices::getInstance().get_source(i, &source);
+		AMFITRACK_Devices::getInstance().get_sensor_by_id(i, &sensor);
+		AMFITRACK_Devices::getInstance().get_source_by_id(i, &source);
 
 		if (!sensor._dev_handle || stillPresent(sensor._dev_handle, PID_Sensor))
 		{
@@ -377,7 +377,7 @@ void HIDMonitor::removeDisconnected()
 			if (sensor._dev_handle)
 			{
 				hid_close(sensor._dev_handle);
-				AMFITRACK_Devices::getInstance().set_hid(i, NULL, true);
+				AMFITRACK_Devices::getInstance().set_hid(i, AMFITRACK_Devices::deviceType_t::Sensor, NULL);
 				sourceDisconnected = false;
 			}
 		}
@@ -387,7 +387,7 @@ void HIDMonitor::removeDisconnected()
 			if (source._dev_handle)
 			{
 				hid_close(source._dev_handle);
-				AMFITRACK_Devices::getInstance().set_hid(i, NULL, false);
+				AMFITRACK_Devices::getInstance().set_hid(i, AMFITRACK_Devices::deviceType_t::Source, NULL);
 			}
 		}
 	}
@@ -452,17 +452,17 @@ void HIDMonitor::drainTxQueue()
 	bool sent = false;
 	if (txId == 255)
 	{
-		for (uint8_t i = 0; i < AMFITRACK_DEVICE_COUNT; i++)
+		for (uint8_t i = 0; i < AMFITRACK_Devices::getInstance().get_numer_of_sensors(); i++)
 		{
 			AMFITRACK_Sensor s;
-			AMFITRACK_Devices::getInstance().get_sensor(i, &s);
+			AMFITRACK_Devices::getInstance().get_sensor_by_number(i, &s);
 			if (s._dev_handle && hidWrite(s._dev_handle, txData, dataLen) >= 0)
 				sent = true;
 		}
-		for (uint8_t i = 0; i < AMFITRACK_DEVICE_COUNT; i++)
+		for (uint8_t i = 0; i < AMFITRACK_Devices::getInstance().get_numer_of_sources(); i++)
 		{
 			AMFITRACK_Source s;
-			AMFITRACK_Devices::getInstance().get_source(i, &s);
+			AMFITRACK_Devices::getInstance().get_source_by_number(i, &s);
 			if (s._dev_handle && hidWrite(s._dev_handle, txData, dataLen) >= 0)
 				sent = true;
 		}
@@ -501,8 +501,8 @@ void HIDMonitor::drainRx()
 			{
 				AMFITRACK_Sensor sensor;
 				AMFITRACK_Source source;
-				AMFITRACK_Devices::getInstance().get_sensor(i, &sensor);
-				AMFITRACK_Devices::getInstance().get_source(i, &source);
+				AMFITRACK_Devices::getInstance().get_sensor_by_id(i, &sensor);
+				AMFITRACK_Devices::getInstance().get_source_by_id(i, &source);
 
 				if (sensor._dev_handle == handle)
 				{
@@ -519,17 +519,17 @@ void HIDMonitor::drainRx()
 		}
 	};
 
-	for (uint8_t i = 0; i < AMFITRACK_DEVICE_COUNT; i++)
+	for (uint8_t i = 0; i < AMFITRACK_Devices::getInstance().get_numer_of_sensors(); i++)
 	{
 		AMFITRACK_Sensor s;
-		AMFITRACK_Devices::getInstance().get_sensor(i, &s);
+		AMFITRACK_Devices::getInstance().get_sensor_by_number(i, &s);
 		if (s._dev_handle)
 			readFrom(s._dev_handle);
 	}
-	for (uint8_t i = 0; i < AMFITRACK_DEVICE_COUNT; i++)
+	for (uint8_t i = 0; i < AMFITRACK_Devices::getInstance().get_numer_of_sources(); i++)
 	{
 		AMFITRACK_Source s;
-		AMFITRACK_Devices::getInstance().get_source(i, &s);
+		AMFITRACK_Devices::getInstance().get_source_by_number(i, &s);
 		if (s._dev_handle)
 			readFrom(s._dev_handle);
 	}
@@ -539,19 +539,25 @@ hid_device *
 HIDMonitor::findHandleByTxId(uint8_t txId)
 {
 	hid_device *hidHandle = nullptr;
-	for (uint8_t i = 0; i < AMFITRACK_DEVICE_COUNT; i++)
+	for (uint8_t i = 0; i < AMFITRACK_Devices::getInstance().get_numer_of_sensors(); i++)
 	{
 		AMFITRACK_Sensor s;
-		AMFITRACK_Devices::getInstance().get_sensor(i, &s);
+		AMFITRACK_Devices::getInstance().get_sensor_by_number(i, &s);
 		if (s.deviceId == txId)
 		{
 			if (!s._dev_handle)
 			{
 				AMFITRACK_Sensor hub;
-				AMFITRACK_Devices::getInstance().get_sensor(s.hub_ID, &hub);
+				AMFITRACK_Source hub_source;
+				AMFITRACK_Devices::getInstance().get_sensor_by_id(s.hub_ID, &hub);
+				AMFITRACK_Devices::getInstance().get_source_by_id(s.hub_ID, &hub_source);
 				if (hub._dev_handle)
 				{
 					hidHandle = hub._dev_handle;
+				}
+				else if (hub_source._dev_handle)
+				{
+					hidHandle = hub_source._dev_handle;
 				}
 			}
 			else
@@ -560,10 +566,10 @@ HIDMonitor::findHandleByTxId(uint8_t txId)
 			}
 		}
 	}
-	for (uint8_t i = 0; i < AMFITRACK_DEVICE_COUNT; i++)
+	for (uint8_t i = 0; i < AMFITRACK_Devices::getInstance().get_numer_of_sources(); i++)
 	{
 		AMFITRACK_Source s;
-		AMFITRACK_Devices::getInstance().get_source(i, &s);
+		AMFITRACK_Devices::getInstance().get_source_by_number(i, &s);
 		if (s.deviceId == txId && s._dev_handle)
 			hidHandle = s._dev_handle;
 	}

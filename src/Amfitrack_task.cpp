@@ -72,7 +72,7 @@ void amfitrack_task::getMissingInfo()
 			for (uint8_t i = 0; i < AMFITRACK_DEVICE_COUNT; i++)
 			{
 				AMFITRACK_Sensor sensor;
-				AMFITRACK_Devices::getInstance().get_sensor(i, &sensor);
+				AMFITRACK_Devices::getInstance().get_sensor_by_id(i, &sensor);
 				if (!sensor.active)
 					continue;
 
@@ -139,17 +139,17 @@ void amfitrack_task::checkDisconnected()
 	{
 		const auto device_id = static_cast<uint8_t>(device_index);
 		AMFITRACK_Sensor _sensor;
-		devices.get_sensor(device_id, &_sensor);
+		devices.get_sensor_by_id(device_id, &_sensor);
 		if (_sensor.active && ((now - _sensor.lastTimeSeenMs) > DISCONNECT_TIMEOUT))
 		{
-			devices.set(device_id, false);
+			devices.set(device_id, AMFITRACK_Devices::deviceType_t::Sensor, false);
 		}
 
 		AMFITRACK_Source _source;
-		devices.get_source(device_id, &_source);
+		devices.get_source_by_id(device_id, &_source);
 		if (_source.active && ((now - _source.lastTimeSeenMs) > DISCONNECT_TIMEOUT))
 		{
-			devices.set(device_id, false);
+			devices.set(device_id, AMFITRACK_Devices::deviceType_t::Source, false);
 		}
 	}
 }

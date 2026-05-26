@@ -138,7 +138,7 @@ DeviceConfig_t load_config(uint8_t device_id)
 	DeviceConfig_t config = {};
 	AMFITRACK_Sensor sensor;
 
-	if (AMFITRACK_Devices::getInstance().get_sensor(device_id, &sensor))
+	if (AMFITRACK_Devices::getInstance().get_sensor_by_id(device_id, &sensor))
 	{
 		config = sensor.config;
 		sanitize(config);
@@ -223,7 +223,7 @@ CategoryEntry_t *ensure_all_config_category(DeviceConfig_t &config)
 
 bool store_config(uint8_t device_id, DeviceConfig_t const &config)
 {
-	const bool stored = AMFITRACK_Devices::getInstance().set(device_id, config);
+	const bool stored = AMFITRACK_Devices::getInstance().set(device_id, AMFITRACK_Devices::deviceType_t::Both, config);
 	if (!stored)
 	{
 		LOG_E("store_config: failed to store config for device_id=%u", device_id);
