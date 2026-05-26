@@ -38,6 +38,15 @@ static constexpr int kProbeTimeoutMs = 10;
 static constexpr int kProbeMaxAttempts = 10;
 static constexpr int kScanIntervalS = 1;
 
+struct PendingHIDDevice
+{
+	uint16_t pid;
+	std::chrono::steady_clock::time_point firstSeen;
+};
+
+std::unordered_map<std::string, PendingHIDDevice> _pendingDevices;
+static constexpr auto kProbeDelay = std::chrono::milliseconds(500);
+
 //-----------------------------------------------------------------------------
 // Section: Function prototypes
 //-----------------------------------------------------------------------------
@@ -53,22 +62,6 @@ static bool isSameDevice(hid_device *handle, const hid_device_info *info)
 	if (cur->path && info->path)
 		return std::strcmp(cur->path, info->path) == 0;
 	return false;
-}
-
-static bool parseIdReply(const lib_AmfiProt_Frame_t &f, uint8_t &deviceId, uint32_t uuid[3])
-{
-	if (f.header.payloadType != libAmfiProt_PayloadType_Common ||
-		f.payload[0] != lib_AmfiProt_PayloadID_ReplyDeviceID)
-		return false;
-
-	lib_AmfiProt_DeviceID idFrame;
-	memcpy(&idFrame, &f.payload[0], sizeof(lib_AmfiProt_DeviceID));
-	deviceId = idFrame.TxID;
-	uuid[0] = idFrame.UUID[0];
-	uuid[1] = idFrame.UUID[1];
-	uuid[2] = idFrame.UUID[2];
-
-	return true;
 }
 
 static bool parseNameReply(const lib_AmfiProt_Frame_t &f, char *buf, size_t bufSize)
@@ -91,48 +84,62 @@ static bool probeDeviceIdentity(hid_device *handle,
 								uint8_t &deviceIdOut,
 								uint32_t uuidOut[3],
 								char *nameOut,
-								size_t nameSize)
+								size_t nameSize,
+								const char *requiredNamePart = nullptr)
 {
 	AmfiProt_API &api = AmfiProt_API::getInstance();
 	lib_AmfiProt_Frame_t txFrame{}, rxFrame{};
 	uint8_t packet[USB_REPORT_LENGTH]{};
 
-	// ── Request ID ────────────────────────────────────────────────────────────
-	uint8_t payload = lib_AmfiProt_PayloadID_RequestDeviceID;
-	api.lib_AmfiProt_EncodeFrame(&txFrame, &payload, sizeof(payload), libAmfiProt_PayloadType_Common, 0, lib_AmfiProt_destination_Broadcast, lib_AmfiProt_packetType_NoAck);
+	// ── Request name via broadcast ───────────────────────────────────────────
+	uint8_t payload = lib_AmfiProt_PayloadID_RequestDeviceName;
+
+	api.lib_AmfiProt_EncodeFrame(&txFrame,
+								 &payload,
+								 sizeof(payload),
+								 libAmfiProt_PayloadType_Common,
+								 0,
+								 lib_AmfiProt_destination_Broadcast,
+								 lib_AmfiProt_packetType_NoAck);
+
 	std::memcpy(packet, &txFrame, api.lib_AmfiProt_FrameSize(&txFrame));
+
 	if (writeFn(handle, packet, api.lib_AmfiProt_FrameSize(&txFrame)) < 0)
 		return false;
 
-	bool hasId = false;
-	for (int i = 0; i < kProbeMaxAttempts && !hasId; ++i)
+	for (int i = 0; i < kProbeMaxAttempts; ++i)
 	{
 		const int n = readFn(handle, packet, kProbeTimeoutMs);
-		api.deserialize_frame(packet, (uint8_t)n);
-		if (n > 0 && api.lib_AmfiProt_DeserializeFrame(&rxFrame, packet, (uint8_t)n))
-			hasId = parseIdReply(rxFrame, deviceIdOut, uuidOut);
+		if (n <= 0)
+			continue;
+
+		api.deserialize_frame(packet, static_cast<uint8_t>(n));
+
+		if (!api.lib_AmfiProt_DeserializeFrame(&rxFrame, packet, static_cast<uint8_t>(n)))
+			continue;
+
+		if (!parseNameReply(rxFrame, nameOut, nameSize))
+			continue;
+
+		// Device ID is taken from the received frame header
+		deviceIdOut = rxFrame.header.source;
+
+		// UUID is no longer requested here
+		uuidOut[0] = 0;
+		uuidOut[1] = 0;
+		uuidOut[2] = 0;
+
+		// Optional name filter, e.g. "source"
+		if (requiredNamePart != nullptr)
+		{
+			if (std::strstr(nameOut, requiredNamePart) == nullptr)
+				continue;
+		}
+
+		return true;
 	}
-	if (!hasId)
-		return false;
 
-	// ── Request name ──────────────────────────────────────────────────────────
-	payload = lib_AmfiProt_PayloadID_RequestDeviceName;
-	api.lib_AmfiProt_EncodeFrame(&txFrame, &payload, sizeof(payload), libAmfiProt_PayloadType_Common, 0, deviceIdOut, lib_AmfiProt_packetType_NoAck);
-	std::memset(packet, 0, sizeof(packet));
-	std::memcpy(packet, &txFrame, api.lib_AmfiProt_FrameSize(&txFrame));
-	if (writeFn(handle, packet, api.lib_AmfiProt_FrameSize(&txFrame)) < 0)
-		return false;
-
-	bool hasName = false;
-	for (int i = 0; i < kProbeMaxAttempts && !hasName; ++i)
-	{
-		const int n = readFn(handle, packet, kProbeTimeoutMs);
-		api.deserialize_frame(packet, (uint8_t)n);
-		if (n > 0 && api.lib_AmfiProt_DeserializeFrame(&rxFrame, packet, (uint8_t)n))
-			hasName = parseNameReply(rxFrame, nameOut, nameSize);
-	}
-
-	return true; // name is optional — id is enough
+	return false;
 }
 
 bool stillPresent(hid_device *handle, uint16_t pid)
@@ -234,44 +241,63 @@ void HIDMonitor::syncDevices()
 	_lastScanTime = now;
 }
 
+bool isAlreadyOpen(uint16_t pid, const hid_device_info *info)
+{
+	if (pid == PID_Sensor)
+	{
+		for (uint8_t i = 0; i < AMFITRACK_DEVICE_COUNT; i++)
+		{
+			AMFITRACK_Sensor _sensors;
+			AMFITRACK::getInstance().get_sensor(i, &_sensors);
+			if (_sensors._dev_handle)
+			{
+				if (isSameDevice(_sensors._dev_handle, info))
+				{
+					return true;
+				}
+			}
+		}
+	}
+	else if (pid == PID_Source)
+	{
+		for (uint8_t i = 0; i < AMFITRACK_DEVICE_COUNT; i++)
+		{
+			AMFITRACK_Source _sources;
+			AMFITRACK::getInstance().get_source(i, &_sources);
+			if (isSameDevice(_sources._dev_handle, info))
+			{
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
 void HIDMonitor::scanForPid(uint16_t pid)
 {
+	const auto now = std::chrono::steady_clock::now();
+
 	hid_device_info *list = hid_enumerate(VID, pid);
+
 	for (const hid_device_info *info = list; info; info = info->next)
 	{
-		bool alreadyOpen = false;
+		std::string path = info->path;
 
-		if (pid == PID_Sensor)
+		if (isAlreadyOpen(pid, info))
+			continue;
+
+		auto it = _pendingDevices.find(path);
+
+		if (it == _pendingDevices.end())
 		{
-			for (uint8_t i = 0; i < AMFITRACK_DEVICE_COUNT; i++)
-			{
-				AMFITRACK_Sensor _sensors;
-				AMFITRACK::getInstance().get_sensor(i, &_sensors);
-				if (_sensors._dev_handle)
-				{
-					if (isSameDevice(_sensors._dev_handle, info))
-					{
-						alreadyOpen = true;
-						break;
-					}
-				}
-			}
-		}
-		else if (pid == PID_Source)
-		{
-			for (uint8_t i = 0; i < AMFITRACK_DEVICE_COUNT; i++)
-			{
-				AMFITRACK_Source _sources;
-				AMFITRACK::getInstance().get_source(i, &_sources);
-				if (isSameDevice(_sources._dev_handle, info))
-				{
-					alreadyOpen = true;
-					break;
-				}
-			}
+			_pendingDevices[path] = PendingHIDDevice{
+				.pid = pid,
+				.firstSeen = now
+			};
+			continue;
 		}
 
-		if (alreadyOpen)
+		if (now - it->second.firstSeen < kProbeDelay)
 			continue;
 
 		hid_device *handle = hid_open_path(info->path);
@@ -280,33 +306,41 @@ void HIDMonitor::scanForPid(uint16_t pid)
 
 		hid_set_nonblocking(handle, 1);
 
+		bool success = false;
+
 		if (pid == PID_Sensor)
 		{
 			AMFITRACK_HID sensor;
 			sensor._dev_handle = handle;
-			if (!probeSensorIdentity(sensor))
+
+			if (probeSensorIdentity(sensor))
 			{
-				hid_close(handle);
-				continue;
+				AMFITRACK_Devices::getInstance().set(sensor.deviceId, true);
+				AMFITRACK_Devices::getInstance().set_hid(sensor.deviceId, sensor._dev_handle, true);
+				LOG_I("Sensor connected on USB: id=%u name=%s", sensor.deviceId, sensor.name);
+				success = true;
 			}
-			AMFITRACK_Devices::getInstance().set(sensor.deviceId, true);
-			AMFITRACK_Devices::getInstance().set_hid(sensor.deviceId, sensor._dev_handle, true);
-			LOG_I("Sensor connected on USB: id=%u name=%s", sensor.deviceId, sensor.name);
 		}
-		else
+		else if (pid == PID_Source)
 		{
 			AMFITRACK_HID source;
 			source._dev_handle = handle;
-			if (!probeSourceIdentity(source))
+
+			if (probeSourceIdentity(source))
 			{
-				hid_close(handle);
-				continue;
+				AMFITRACK_Devices::getInstance().set(source.deviceId, true);
+				AMFITRACK_Devices::getInstance().set_hid(source.deviceId, source._dev_handle, false);
+				LOG_I("Source connected on USB: id=%u name=%s", source.deviceId, source.name);
+				success = true;
 			}
-			AMFITRACK_Devices::getInstance().set(source.deviceId, true);
-			AMFITRACK_Devices::getInstance().set_hid(source.deviceId, source._dev_handle, false);
-			LOG_I("Source connected on USB: id=%u name=%s", source.deviceId, source.name);
 		}
+
+		if (!success)
+			hid_close(handle);
+
+		_pendingDevices.erase(path);
 	}
+
 	hid_free_enumeration(list);
 }
 
@@ -392,7 +426,7 @@ bool HIDMonitor::probeSourceIdentity(AMFITRACK_HID &source)
 	auto readFn = [this](hid_device *h, void *d, int t)
 	{ return hidReadTimeout(h, d, t); };
 
-	if (!probeDeviceIdentity(source._dev_handle, writeFn, readFn, deviceId, uuid, name, 50))
+	if (!probeDeviceIdentity(source._dev_handle, writeFn, readFn, deviceId, uuid, name, 50, "Source"))
 		return false;
 
 	source.deviceId = deviceId;
