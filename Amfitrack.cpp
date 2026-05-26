@@ -22,7 +22,7 @@
 #include <memory>
 #include <utility>
 
-#if USE_THREAD_BASED
+#ifdef USE_THREAD_BASED
 #include "thread"
 #endif
 
@@ -108,11 +108,14 @@ void AMFITRACK::init()
 
 void AMFITRACK::start_task()
 {
+
 	stop_running = false;
+#ifdef USE_THREAD_BASED
 	// Create a thread object
 	std::thread background_thread(background_amfitrack_task, this);
 
 	background_thread.detach();
+#endif
 }
 
 void AMFITRACK::stop_task()
