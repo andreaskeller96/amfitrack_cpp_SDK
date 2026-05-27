@@ -101,6 +101,7 @@ void AmfiProt_API::lib_AmfiProt_Amfitrack_handle_SensorMeasurement(void *handle,
 	imu.Rotation_Y = tempIMU.rotation_y_in_rad_per_sec;
 	imu.Rotation_Z = tempIMU.rotation_z_in_rad_per_sec;
 	AMFITRACK_Devices::getInstance().set(_deviceID, imu);
+	AMFITRACK_Devices::getInstance().set(_deviceID, SensorMeasurement);
 }
 
 void AmfiProt_API::lib_AmfiProt_Amfitrack_handle_SensorStatus(void *handle, lib_AmfiProt_Frame_t *frame, void *routing_handle)
