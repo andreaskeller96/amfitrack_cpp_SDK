@@ -113,6 +113,8 @@ bool AMFITRACK_Devices::get_sensor_by_id(uint8_t device_id, AMFITRACK_Sensor *se
 {
 	if ((sensor == nullptr) || !is_valid_device_id(device_id) || device_id_exist(device_id) == deviceType_t::None)
 	{
+		AMFITRACK_Sensor emptySensor;
+		*sensor = emptySensor;
 		return false;
 	}
 
@@ -121,7 +123,11 @@ bool AMFITRACK_Devices::get_sensor_by_id(uint8_t device_id, AMFITRACK_Sensor *se
 #endif
 
 	if (device_id_exist(device_id) != deviceType_t::Sensor)
+	{
+		AMFITRACK_Sensor emptySensor;
+		*sensor = emptySensor;
 		return false;
+	}
 
 	*sensor = _sensors[device_id];
 	return true;
@@ -131,6 +137,8 @@ bool AMFITRACK_Devices::get_source_by_id(uint8_t device_id, AMFITRACK_Source *so
 {
 	if ((source == nullptr) || !is_valid_device_id(device_id) || device_id_exist(device_id) == deviceType_t::None)
 	{
+		AMFITRACK_Source emptySource;
+		*source = emptySource;
 		return false;
 	}
 
@@ -139,7 +147,11 @@ bool AMFITRACK_Devices::get_source_by_id(uint8_t device_id, AMFITRACK_Source *so
 #endif
 
 	if (device_id_exist(device_id) != deviceType_t::Source)
+	{
+		AMFITRACK_Source emptySource;
+		*source = emptySource;
 		return false;
+	}
 
 	*source = _sources[device_id];
 	return true;
@@ -149,6 +161,8 @@ bool AMFITRACK_Devices::get_sensor_by_number(uint8_t device_number, AMFITRACK_Se
 {
 	if (sensor == nullptr)
 	{
+		AMFITRACK_Sensor emptySensor;
+		*sensor = emptySensor;
 		return false;
 	}
 
@@ -158,6 +172,8 @@ bool AMFITRACK_Devices::get_sensor_by_number(uint8_t device_number, AMFITRACK_Se
 
 	if (device_number >= _sensors.size())
 	{
+		AMFITRACK_Sensor emptySensor;
+		*sensor = emptySensor;
 		return false;
 	}
 
@@ -172,6 +188,8 @@ bool AMFITRACK_Devices::get_source_by_number(uint8_t device_number, AMFITRACK_So
 {
 	if (source == nullptr)
 	{
+		AMFITRACK_Source emptySource;
+		*source = emptySource;
 		return false;
 	}
 
@@ -181,6 +199,8 @@ bool AMFITRACK_Devices::get_source_by_number(uint8_t device_number, AMFITRACK_So
 
 	if (device_number >= _sources.size())
 	{
+		AMFITRACK_Source emptySource;
+		*source = emptySource;
 		return false;
 	}
 
