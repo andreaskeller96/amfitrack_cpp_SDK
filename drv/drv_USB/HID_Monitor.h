@@ -10,7 +10,6 @@
 // Section: Includes
 //-----------------------------------------------------------------------------
 #include "hidapi.h"
-#include <chrono>
 #include <cstdint>
 #include <functional>
 #include <vector>
@@ -100,7 +99,7 @@ class HIDMonitor
 	HIDMonitorCallbacks _cb;
 
 	bool _initialized = false;
-	std::chrono::steady_clock::time_point _lastScanTime{};
+	uint32_t _lastScanTime;
 
 #ifdef USE_THREAD_BASED
 	mutable std::mutex _mutex;

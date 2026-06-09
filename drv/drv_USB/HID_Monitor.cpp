@@ -16,6 +16,7 @@
 #include <cwchar>
 #include "lib_AmfiProt.hpp"
 #include "lib_log.h"
+#include "lib_time.h"
 #include "Amfitrack.h"
 #include "Amfitrack_Devices.h"
 #include "Amfitrack_Sensor.h"
@@ -36,16 +37,16 @@
 //-----------------------------------------------------------------------------
 static constexpr int kProbeTimeoutMs = 10;
 static constexpr int kProbeMaxAttempts = 10;
-static constexpr int kScanIntervalS = 1;
+static constexpr uint32_t kScanIntervalMs = 1000;
 
 struct PendingHIDDevice
 {
 	uint16_t pid;
-	std::chrono::steady_clock::time_point firstSeen;
+	uint32_t firstSeen;
 };
 
 std::unordered_map<std::string, PendingHIDDevice> _pendingDevices;
-static constexpr auto kProbeDelay = std::chrono::milliseconds(500);
+static constexpr uint32_t kProbeDelayMs = 500;
 
 //-----------------------------------------------------------------------------
 // Section: Function prototypes
@@ -230,10 +231,13 @@ bool HIDMonitor::shutdown()
 
 void HIDMonitor::syncDevices()
 {
-	const auto now = std::chrono::steady_clock::now();
-	if (_lastScanTime != std::chrono::steady_clock::time_point{} &&
-		std::chrono::duration_cast<std::chrono::seconds>(now - _lastScanTime).count() < kScanIntervalS)
+	const uint32_t now = lib_time::get_time_ms();
+
+	if (_lastScanTime != 0 &&
+		(now - _lastScanTime) < kScanIntervalMs)
+	{
 		return;
+	}
 
 	scanForPid(PID_Sensor);
 	scanForPid(PID_Source);
@@ -275,7 +279,7 @@ bool isAlreadyOpen(uint16_t pid, const hid_device_info *info)
 
 void HIDMonitor::scanForPid(uint16_t pid)
 {
-	const auto now = std::chrono::steady_clock::now();
+	const uint32_t now = lib_time::get_time_ms();
 
 	hid_device_info *list = hid_enumerate(VID, pid);
 
@@ -297,7 +301,7 @@ void HIDMonitor::scanForPid(uint16_t pid)
 			continue;
 		}
 
-		if (now - it->second.firstSeen < kProbeDelay)
+		if (now - it->second.firstSeen < kProbeDelayMs)
 			continue;
 
 		hid_device *handle = hid_open_path(info->path);

@@ -10,7 +10,6 @@
 #include "AmfitrackDeviceTypes.h"
 #include "lib_AmfiProt.hpp"
 
-#include <chrono>
 #include <cstdint>
 
 #ifdef USE_THREAD_BASED
