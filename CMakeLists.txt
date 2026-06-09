@@ -27,6 +27,7 @@ target_include_directories(${CMAKE_LIBRARY_NAME} PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/lib/lib_queue
     ${CMAKE_CURRENT_SOURCE_DIR}/lib/lib_log
     ${CMAKE_CURRENT_SOURCE_DIR}/lib/lib_fifo
+    ${CMAKE_CURRENT_SOURCE_DIR}/lib/lib_time
 
     ${CMAKE_CURRENT_SOURCE_DIR}/drv/drv_USB
 
@@ -65,6 +66,8 @@ target_sources(${CMAKE_LIBRARY_NAME} PRIVATE
     lib/lib_log/lib_log.h
     lib/lib_fifo/lib_fifo.hpp
 
+    lib/lib_time/lib_time.cpp
+    lib/lib_time/lib_time.h
 
     drv/drv_USB/HID_Monitor.cpp
     drv/drv_USB/HID_Monitor.h

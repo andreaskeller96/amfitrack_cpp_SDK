@@ -57,9 +57,8 @@ class AMFITRACK_Devices
 
 	static AMFITRACK_Devices &getInstance();
 
-	static std::size_t device_count();
+	static uint32_t device_count();
 	static bool is_valid_device_id(uint8_t device_id);
-	static uint32_t get_time_ms();
 
 	bool get_sensor_by_id(uint8_t device_id, AMFITRACK_Sensor *sensor);
 	bool get_source_by_id(uint8_t device_id, AMFITRACK_Source *source);

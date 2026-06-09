@@ -98,5 +98,5 @@ class AMFITRACK_Config
 	uint16_t _config_index = 0U;
 	bool _force_all_config = false;
 	bool _waiting_for_reply = false;
-	std::chrono::steady_clock::time_point _last_request_time{};
+	uint32_t _last_request_time = 0;
 };

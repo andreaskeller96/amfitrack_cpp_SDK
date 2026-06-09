@@ -15,9 +15,9 @@
 #include "Amfitrack_Sensor.h"
 #include "lib_AmfiProt_API.hpp"
 #include "lib_log.h"
+#include "lib_time.h"
 
 #include <algorithm>
-#include <chrono>
 #include <cstddef>
 #include <cstring>
 #include <limits>
@@ -50,7 +50,7 @@ constexpr uint8_t kAllConfigCategory = static_cast<uint8_t>(lib_AmfiProt_ConfigC
 constexpr char kAllConfigCategoryName[] = "All";
 constexpr std::size_t kMaxStoredCategories = std::numeric_limits<uint8_t>::max();
 constexpr std::size_t kMaxStoredConfigs = std::numeric_limits<uint16_t>::max();
-constexpr std::chrono::seconds kConfigReplyTimeout(1);
+static constexpr uint32_t kConfigReplyTimeoutMs = 1000; // example
 
 void copy_payload_name(char *dest, std::size_t dest_size, char const *src, std::size_t src_size)
 {
@@ -600,9 +600,10 @@ bool AMFITRACK_Config::request_current()
 {
 	if (_waiting_for_reply)
 	{
-		const auto now = std::chrono::steady_clock::now();
-		if ((_last_request_time != std::chrono::steady_clock::time_point{}) &&
-			((now - _last_request_time) < kConfigReplyTimeout))
+		const uint32_t now = lib_time::get_time_ms();
+
+		if ((_last_request_time != 0) &&
+			((now - _last_request_time) < kConfigReplyTimeoutMs))
 		{
 			return true;
 		}
@@ -770,7 +771,15 @@ bool AMFITRACK_Config::request_value_by_uid()
 void AMFITRACK_Config::set_waiting_for_reply(bool waiting)
 {
 	_waiting_for_reply = waiting;
-	_last_request_time = waiting ? std::chrono::steady_clock::now() : std::chrono::steady_clock::time_point{};
+
+	if (waiting)
+	{
+		_last_request_time = lib_time::get_time_ms();
+	}
+	else
+	{
+		_last_request_time = 0;
+	}
 }
 
 bool AMFITRACK_Config::select_next_config(DeviceConfig_t const &config)

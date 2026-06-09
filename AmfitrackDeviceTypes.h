@@ -12,6 +12,10 @@
 
 #include "lib_Generic_Parameter.h"
 
+#ifndef MAX_NAME_LENGTH
+#define MAX_NAME_LENGTH 64
+#endif
+
 //-----------------------------------------------------------------------------
 // General enum types
 //-----------------------------------------------------------------------------

@@ -13,8 +13,8 @@
 
 #include "lib_AmfiProt_API.hpp"
 #include "Amfitrack_Devices.h"
+#include "lib_time.h"
 
-#include <chrono>
 #include <cstddef>
 #include <mutex>
 //-----------------------------------------------------------------------------
@@ -31,15 +31,15 @@
 //-----------------------------------------------------------------------------
 // Section: Variables
 //-----------------------------------------------------------------------------
-static constexpr std::chrono::seconds kKeepAlivePingInterval(2);
 static AmfiProt_API *amfiprot_api = nullptr;
+amfitrack_task::missingInfo_t amfitrack_task::missingInfo = amfitrack_task::missingInfo_t::missingInfo_FW;
 
-static std::chrono::steady_clock::time_point lastKeepAlivePingTime{};
+static constexpr uint32_t kKeepAlivePingIntervalMs = 2000;
+static uint32_t lastKeepAlivePingTimeMs = 0;
 static std::mutex keepAlivePingMutex;
 
-static constexpr std::chrono::seconds kGetMissingInfoInterval(2);
-amfitrack_task::missingInfo_t amfitrack_task::missingInfo = amfitrack_task::missingInfo_t::missingInfo_FW;
-static std::chrono::steady_clock::time_point lastGetMissingInfoTime{};
+static constexpr uint32_t kGetMissingInfoIntervalMs = 2000;
+static uint32_t lastGetMissingInfoTimeMs = 0;
 static std::mutex getMissingInfoMutex;
 //-----------------------------------------------------------------------------
 // Section: Function prototypes
@@ -63,64 +63,64 @@ void amfitrack_task::getName(uint8_t deviceID)
 
 void amfitrack_task::getMissingInfo()
 {
-	const auto now = std::chrono::steady_clock::now();
-	{
-		const std::lock_guard<std::mutex> lock(getMissingInfoMutex);
-		if (lastGetMissingInfoTime == std::chrono::steady_clock::time_point{} ||
-			now - lastGetMissingInfoTime >= kGetMissingInfoInterval)
-		{
-			for (uint8_t i = 0; i < AMFITRACK_DEVICE_COUNT; i++)
-			{
-				AMFITRACK_Sensor sensor;
-				AMFITRACK_Devices::getInstance().get_sensor_by_id(i, &sensor);
-				if (!sensor.active)
-					continue;
+	const uint32_t now = lib_time::get_time_ms();
 
-				switch (missingInfo)
-				{
-					case amfitrack_task::missingInfo_t::missingInfo_FW:
-						if (sensor.FW_Version.Major == 0)
-						{
-							getVersion(i, AMFITRACK_FW_VERSION_ID);
-						}
-						break;
-					case amfitrack_task::missingInfo_t::missingInfo_RF:
-						if (sensor.RF_Version.Major == 0)
-						{
-							getVersion(i, AMFITRACK_RF_VERSION_ID);
-						}
-						break;
-					case amfitrack_task::missingInfo_t::missingInfo_HW:
-						if (sensor.HW_Version.Generation == 0)
-						{
-							getVersion(i, AMFITRACK_HW_VERSION_ID);
-						}
-						break;
-					case amfitrack_task::missingInfo_t::missingInfo_Name:
-						if (sensor.name[0] == 0x00)
-						{
-							getName(i);
-						}
-						break;
-				}
-			}
+	const std::lock_guard<std::mutex> lock(getMissingInfoMutex);
+
+	if (lastGetMissingInfoTimeMs == 0 ||
+		(now - lastGetMissingInfoTimeMs) >= kGetMissingInfoIntervalMs)
+	{
+		for (uint8_t i = 0; i < AMFITRACK_DEVICE_COUNT; i++)
+		{
+			AMFITRACK_Sensor sensor;
+			AMFITRACK_Devices::getInstance().get_sensor_by_id(i, &sensor);
+			if (!sensor.active)
+				continue;
+
 			switch (missingInfo)
 			{
 				case amfitrack_task::missingInfo_t::missingInfo_FW:
-					missingInfo = amfitrack_task::missingInfo_t::missingInfo_RF;
+					if (sensor.FW_Version.Major == 0)
+					{
+						getVersion(i, AMFITRACK_FW_VERSION_ID);
+					}
 					break;
 				case amfitrack_task::missingInfo_t::missingInfo_RF:
-					missingInfo = amfitrack_task::missingInfo_t::missingInfo_HW;
+					if (sensor.RF_Version.Major == 0)
+					{
+						getVersion(i, AMFITRACK_RF_VERSION_ID);
+					}
 					break;
 				case amfitrack_task::missingInfo_t::missingInfo_HW:
-					missingInfo = amfitrack_task::missingInfo_t::missingInfo_Name;
+					if (sensor.HW_Version.Generation == 0)
+					{
+						getVersion(i, AMFITRACK_HW_VERSION_ID);
+					}
 					break;
 				case amfitrack_task::missingInfo_t::missingInfo_Name:
-					missingInfo = amfitrack_task::missingInfo_t::missingInfo_FW;
+					if (sensor.name[0] == 0x00)
+					{
+						getName(i);
+					}
 					break;
 			}
-			lastGetMissingInfoTime = now;
 		}
+		switch (missingInfo)
+		{
+			case amfitrack_task::missingInfo_t::missingInfo_FW:
+				missingInfo = amfitrack_task::missingInfo_t::missingInfo_RF;
+				break;
+			case amfitrack_task::missingInfo_t::missingInfo_RF:
+				missingInfo = amfitrack_task::missingInfo_t::missingInfo_HW;
+				break;
+			case amfitrack_task::missingInfo_t::missingInfo_HW:
+				missingInfo = amfitrack_task::missingInfo_t::missingInfo_Name;
+				break;
+			case amfitrack_task::missingInfo_t::missingInfo_Name:
+				missingInfo = amfitrack_task::missingInfo_t::missingInfo_FW;
+				break;
+		}
+		lastGetMissingInfoTimeMs = now;
 	}
 }
 
@@ -133,7 +133,7 @@ void amfitrack_task::keepAlivePing()
 void amfitrack_task::checkDisconnected()
 {
 	AMFITRACK_Devices &devices = AMFITRACK_Devices::getInstance();
-	const uint32_t now = AMFITRACK_Devices::get_time_ms();
+	const uint32_t now = lib_time::get_time_ms();
 
 	for (std::size_t device_index = 0; device_index < AMFITRACK_Devices::device_count(); device_index++)
 	{
@@ -158,24 +158,25 @@ void amfitrack_task::init()
 {
 	const std::lock_guard<std::mutex> lock(keepAlivePingMutex);
 	amfiprot_api = &AmfiProt_API::getInstance();
-	lastKeepAlivePingTime = {};
-	lastGetMissingInfoTime = {};
-	const auto now = std::chrono::steady_clock::now();
-	lastKeepAlivePingTime = now;
-	lastGetMissingInfoTime = now;
+	const uint32_t now = lib_time::get_time_ms();
+
+	lastKeepAlivePingTimeMs = now;
+	lastGetMissingInfoTimeMs = now;
 }
 
 void amfitrack_task::run()
 {
-	const auto now = std::chrono::steady_clock::now();
+	const uint32_t now = lib_time::get_time_ms();
+
 	{
 		const std::lock_guard<std::mutex> lock(keepAlivePingMutex);
+
 		if (amfiprot_api != nullptr &&
-			(lastKeepAlivePingTime == std::chrono::steady_clock::time_point{} ||
-			 now - lastKeepAlivePingTime >= kKeepAlivePingInterval))
+			(lastKeepAlivePingTimeMs == 0 ||
+			 (now - lastKeepAlivePingTimeMs) >= kKeepAlivePingIntervalMs))
 		{
 			keepAlivePing();
-			lastKeepAlivePingTime = now;
+			lastKeepAlivePingTimeMs = now;
 		}
 	}
 

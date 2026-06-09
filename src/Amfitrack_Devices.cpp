@@ -13,6 +13,7 @@
 
 #include "Amfitrack_Sensor.h"
 #include "lib_log.h"
+#include "lib_time.h"
 
 #include <algorithm>
 #include <cstring>
@@ -45,7 +46,7 @@ AMFITRACK_Devices::AMFITRACK_Devices()
 {
 }
 
-std::size_t AMFITRACK_Devices::device_count()
+uint32_t AMFITRACK_Devices::device_count()
 {
 	return AMFITRACK_DEVICE_COUNT;
 }
@@ -72,14 +73,6 @@ AMFITRACK_Devices::deviceType_t AMFITRACK_Devices::device_id_exist(uint8_t devic
 	}
 
 	return deviceType_t::None;
-}
-
-uint32_t AMFITRACK_Devices::get_time_ms()
-{
-	return static_cast<uint32_t>(
-		std::chrono::duration_cast<std::chrono::milliseconds>(
-			std::chrono::steady_clock::now().time_since_epoch())
-			.count());
 }
 
 AMFITRACK_Source *AMFITRACK_Devices::get_or_create_source(uint8_t device_id)
@@ -816,7 +809,7 @@ bool AMFITRACK_Devices::set(uint8_t device_id, Calibration_t const &calibration)
 
 void AMFITRACK_Devices::update_last_seen(uint8_t device_id, deviceType_t type)
 {
-	const uint32_t now = get_time_ms();
+	const uint32_t now = lib_time::get_time_ms();
 
 	if (type == deviceType_t::Sensor)
 	{
