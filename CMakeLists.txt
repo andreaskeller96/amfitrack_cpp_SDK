@@ -60,7 +60,7 @@ target_sources(${CMAKE_LIBRARY_NAME} PRIVATE
     lib/amfiprotapi/lib_AmfiProt_API.hpp
     lib/lib_crc/lib_CRC.cpp
     lib/lib_crc/lib_CRC.hpp
-    lib/lib_generic_parameter/lib_Generic_Parameter.c
+    lib/lib_generic_parameter/lib_Generic_Parameter.cpp
     lib/lib_generic_parameter/lib_Generic_Parameter.h
     lib/lib_log/lib_log.cpp
     lib/lib_log/lib_log.h

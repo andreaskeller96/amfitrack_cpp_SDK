@@ -1,15 +1,6 @@
 //-----------------------------------------------------------------------------
 //                              AMFITECH APS
 //                          ALL RIGHTS RESERVED
-//
-// $URL: $
-// $Rev: $
-// $Date: $
-// $Author: $
-//
-// Description
-// TODO Write a description here
-//
 //-----------------------------------------------------------------------------
 
 #ifndef LIB_GENERIC_PARAMETER_LIB_GENERIC_PARAMETER_H_
@@ -21,10 +12,6 @@
 #define __packed
 #pragma pack(push, 1)
 #define LIB_GENERIC_PARAMETER_PACKED_PUSHED
-#elif defined(__MINGW32__) || defined(__MINGW64__)
-#define __PACKED_STRUCT_GENERIC struct __attribute__((packed))
-#define __weak
-#define __packed __attribute__((packed))
 #else
 #define __PACKED_STRUCT_GENERIC struct __attribute__((packed))
 #define __weak
@@ -34,37 +21,33 @@
 //-----------------------------------------------------------------------------
 // Includes
 //-----------------------------------------------------------------------------
+
 #ifdef USE_PROJECT_CONF
 #include "project_conf.h"
 #endif
 
 #ifdef __cplusplus
 #include <cstdint>
+#include <cstring>
 #else
-/// \cond
 #include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
+#endif
 
-/// \endcond
-#endif // __cplusplus
-
-//-----------------------------------------------------------------------------
-// Defines
-//-----------------------------------------------------------------------------
 #ifdef __cplusplus
 extern "C"
 {
 #endif
 
 	//-----------------------------------------------------------------------------
-	// Type declarations
+	// Types
 	//-----------------------------------------------------------------------------
-	typedef struct lib_Generic_Parameter_Value lib_Generic_Parameter_Value_t;
 
 	typedef enum
 	{
 		lib_Generic_Parameter_Type_void = 0,
+
 		lib_Generic_Parameter_Type_char = 1,
 		lib_Generic_Parameter_Type_s8 = 2,
 		lib_Generic_Parameter_Type_u8 = 3,
@@ -91,22 +74,18 @@ extern "C"
 
 		lib_Generic_Parameter_Type_bool = 20,
 
-		lib_Generic_Parameter_Type_ProcedureCall = 100,
+		lib_Generic_Parameter_Type_ProcedureCall = 100
+
 	} lib_Generic_Parameter_Type_t;
 
 	//-----------------------------------------------------------------------------
-	// Functions
+	// Parameter Value
 	//-----------------------------------------------------------------------------
-	bool lib_Generic_Parameter_ValueIsEqual(lib_Generic_Parameter_Value_t v1, lib_Generic_Parameter_Value_t v2);
-	uint8_t lib_Generic_Parameter_SerializeValueAndType(lib_Generic_Parameter_Value_t value, void *pDest, uint8_t maxLength); // Returns number of bytes written, 0 if there's not enough room in destination for the parameter
-	uint8_t lib_Generic_Parameter_SizeWithType(lib_Generic_Parameter_Value_t value);
 
-	//-----------------------------------------------------------------------------
-	// Variables and constants
-	//-----------------------------------------------------------------------------
 	__PACKED_STRUCT_GENERIC lib_Generic_Parameter_Value
 	{
 		uint8_t type;
+
 		union
 		{
 			bool b;
@@ -130,9 +109,126 @@ extern "C"
 		};
 	};
 
+	typedef struct lib_Generic_Parameter_Value lib_Generic_Parameter_Value_t;
+
+	//-----------------------------------------------------------------------------
+	// Functions
+	//-----------------------------------------------------------------------------
+
+	bool lib_Generic_Parameter_ValueIsEqual(
+		lib_Generic_Parameter_Value_t v1,
+		lib_Generic_Parameter_Value_t v2);
+
+	uint8_t lib_Generic_Parameter_SizeWithType(
+		lib_Generic_Parameter_Value_t value);
+
+	uint8_t lib_Generic_Parameter_SerializeValueAndType(
+		lib_Generic_Parameter_Value_t value,
+		void *pDest,
+		uint8_t maxLength);
+
 #ifdef __cplusplus
-} // extern "C" end
+}
 #endif
+
+class GenericParameter
+{
+  public:
+	static lib_Generic_Parameter_Value_t boolean(bool value)
+	{
+		lib_Generic_Parameter_Value_t p{};
+		p.type = lib_Generic_Parameter_Type_bool;
+		p.b = value;
+		return p;
+	}
+
+	static lib_Generic_Parameter_Value_t character(char value)
+	{
+		lib_Generic_Parameter_Value_t p{};
+		p.type = lib_Generic_Parameter_Type_char;
+		p.ch = value;
+		return p;
+	}
+
+	static lib_Generic_Parameter_Value_t s8(int8_t value)
+	{
+		lib_Generic_Parameter_Value_t p{};
+		p.type = lib_Generic_Parameter_Type_s8;
+		p.s8 = value;
+		return p;
+	}
+
+	static lib_Generic_Parameter_Value_t u8(uint8_t value)
+	{
+		lib_Generic_Parameter_Value_t p{};
+		p.type = lib_Generic_Parameter_Type_u8;
+		p.u8 = value;
+		return p;
+	}
+
+	static lib_Generic_Parameter_Value_t s16(int16_t value)
+	{
+		lib_Generic_Parameter_Value_t p{};
+		p.type = lib_Generic_Parameter_Type_s16LE;
+		p.s16 = value;
+		return p;
+	}
+
+	static lib_Generic_Parameter_Value_t u16(uint16_t value)
+	{
+		lib_Generic_Parameter_Value_t p{};
+		p.type = lib_Generic_Parameter_Type_u16LE;
+		p.u16 = value;
+		return p;
+	}
+
+	static lib_Generic_Parameter_Value_t s32(int32_t value)
+	{
+		lib_Generic_Parameter_Value_t p{};
+		p.type = lib_Generic_Parameter_Type_s32LE;
+		p.s32 = value;
+		return p;
+	}
+
+	static lib_Generic_Parameter_Value_t u32(uint32_t value)
+	{
+		lib_Generic_Parameter_Value_t p{};
+		p.type = lib_Generic_Parameter_Type_u32LE;
+		p.u32 = value;
+		return p;
+	}
+
+	static lib_Generic_Parameter_Value_t f32(float value)
+	{
+		lib_Generic_Parameter_Value_t p{};
+		p.type = lib_Generic_Parameter_Type_f32LE;
+		p.f32 = value;
+		return p;
+	}
+
+	static lib_Generic_Parameter_Value_t f64(double value)
+	{
+		lib_Generic_Parameter_Value_t p{};
+		p.type = lib_Generic_Parameter_Type_f64LE;
+		p.f64 = value;
+		return p;
+	}
+
+	static lib_Generic_Parameter_Value_t procedureCall()
+	{
+		lib_Generic_Parameter_Value_t p{};
+		p.type = lib_Generic_Parameter_Type_ProcedureCall;
+		p.b = true;
+		return p;
+	}
+
+	static lib_Generic_Parameter_Value_t voidValue()
+	{
+		lib_Generic_Parameter_Value_t p{};
+		p.type = lib_Generic_Parameter_Type_void;
+		return p;
+	}
+};
 
 #ifdef LIB_GENERIC_PARAMETER_PACKED_PUSHED
 #pragma pack(pop)
