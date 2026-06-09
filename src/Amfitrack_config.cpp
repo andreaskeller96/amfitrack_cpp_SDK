@@ -39,7 +39,7 @@
 //-----------------------------------------------------------------------------
 // Section: Function prototypes
 //-----------------------------------------------------------------------------
-
+static void log_parameter_value(const lib_Generic_Parameter_Value &value);
 //-----------------------------------------------------------------------------
 // Section: Functions
 //-----------------------------------------------------------------------------
@@ -566,9 +566,10 @@ bool AMFITRACK_Config::set(uint8_t device_id, lib_AmfiProt_ConfigValueUID_t cons
 
 	if (!found)
 	{
-		LOG_W("set(ValueUID): uid=%u not found in any category for device_id=%u",
+		LOG_I("set(ValueUID): uid=%u from device, but not stored in local database for device_id=%u",
 			  config_value.uid,
 			  device_id);
+		log_parameter_value(config_value.value);
 		return false;
 	}
 
