@@ -13,6 +13,33 @@
 #include "lib_Generic_Parameter.h"
 
 //-----------------------------------------------------------------------------
+// General enum types
+//-----------------------------------------------------------------------------
+typedef enum
+{
+	BFIELD_STATUS_TRACKING = 0,
+	BFIELD_STATUS_UNCERTAIN_TRACKING = 1,
+	BFIELD_STATUS_NO_TRACKING = 2,
+	BFIELD_STATUS_TOO_LOW = 3,
+	BFIELD_STATUS_TOO_HIGH = 4,
+	BFIELD_STATUS_SOURCE_COIL_DEFECT = 5,
+	BFIELD_STATUS_SENSOR_COIL_DEFECT = 6
+} BFieldStatus_t;
+
+typedef enum
+{
+	POSE_STATE_NO_TRACKING = 0,
+	POSE_STATE_TRACKING = 1,
+	POSE_STATE_UNCERTAIN_TRACKING = 2,
+	POSE_STATE_POTENTIAL_STARTUP_POSITION = 3,
+	POSE_STATE_AWAITING_LOCK = 4,
+	POSE_STATE_FINDING_HEMISPHERE = 5,
+	POSE_STATE_PLL_CALIBRATION_NPA = 6,
+	POSE_STATE_PLL_CALIBRATION_PA = 7,
+	POSE_STATE_TRACKING_VERIFYING_HEMISPHERE = 8
+} PoseState_t;
+
+//-----------------------------------------------------------------------------
 // General struct types
 //-----------------------------------------------------------------------------
 typedef struct
@@ -69,8 +96,41 @@ typedef struct
 //-----------------------------------------------------------------------------
 typedef struct
 {
+	/** Battery state of charge in percent (0-100) */
 	uint32_t Battery_SOC;
-} Status_t;
+	/** True if battery is charging */
+	bool Battery_Charging;
+
+	/** Received signal strength indicator (dBm) */
+	int8_t RSSI;
+	/** Source temperature in degrees Celsius */
+	float Temperature;
+	/** Field quality in percent (0-100) */
+	uint8_t Field_Quality;
+
+	bool Source_Connected;
+	BFieldStatus_t B_Field_Status;
+	PoseState_t Pose_state;
+} Sensor_Status_t;
+
+typedef struct
+{
+	/** Received signal strength indicator (dBm) */
+	int8_t RSSI;
+	/** Source temperature in degrees Celsius */
+	float Temperature;
+} Source_Status_t;
+
+typedef struct
+{
+	/** External analog input voltage */
+	float ADC_input;
+
+	bool GPIO_1;
+	bool GPIO_2;
+	bool GPIO_3;
+	bool GPIO_4;
+} External_input_t;
 
 typedef struct
 {

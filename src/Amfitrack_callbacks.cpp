@@ -41,17 +41,17 @@ void AmfiProt_API::lib_AmfiProt_Amfitrack_handle_SourceCalibration(void *handle,
 	memcpy(&sourceCalibration, &frame->payload[0], sizeof(lib_AmfiProt_Amfitrack_Source_Calibration_t));
 
 	uint8_t _deviceID = frame->header.source;
+
 	Frequency_t freq;
-	Calibration_t cal;
 	freq.Frequency_X = sourceCalibration.frequency_x_in_Hz;
 	freq.Frequency_Y = sourceCalibration.frequency_y_in_Hz;
 	freq.Frequency_Z = sourceCalibration.frequency_z_in_Hz;
+	AMFITRACK_Devices::getInstance().set(_deviceID, freq);
 
+	Calibration_t cal;
 	cal.Calibration_X = sourceCalibration.calibration_source_coil_x;
 	cal.Calibration_Y = sourceCalibration.calibration_source_coil_y;
 	cal.Calibration_Z = sourceCalibration.calibration_source_coil_z;
-
-	AMFITRACK_Devices::getInstance().set(_deviceID, freq);
 	AMFITRACK_Devices::getInstance().set(_deviceID, cal);
 }
 
@@ -59,23 +59,38 @@ void AmfiProt_API::lib_AmfiProt_Amfitrack_handle_SourceMeasurement(void *handle,
 {
 	(void)handle;
 	(void)routing_handle;
+	uint8_t _deviceID = frame->header.source;
+
 	lib_AmfiProt_Amfitrack_Source_Measurement_t sourceMeasurement;
 	memcpy(&sourceMeasurement, &frame->payload[0], sizeof(lib_AmfiProt_Amfitrack_Source_Measurement_t));
 
-	uint8_t _deviceID = frame->header.source;
 	Current_t cur;
-	Voltage_t vol;
 	cur.Current_X = sourceMeasurement.current_coil_x_in_mA / 1000;
 	cur.Current_Y = sourceMeasurement.current_coil_y_in_mA / 1000;
 	cur.Current_Z = sourceMeasurement.current_coil_z_in_mA / 1000;
+	AMFITRACK_Devices::getInstance().set(_deviceID, cur);
 
+	Voltage_t vol;
 	vol.Voltage_X = sourceMeasurement.voltage_coil_x_in_V;
 	vol.Voltage_Y = sourceMeasurement.voltage_coil_y_in_V;
 	vol.Voltage_Z = sourceMeasurement.voltage_coil_z_in_V;
 	vol.Voltage_Boost = sourceMeasurement.voltage_boost_in_V;
-
-	AMFITRACK_Devices::getInstance().set(_deviceID, cur);
 	AMFITRACK_Devices::getInstance().set(_deviceID, vol);
+
+	lib_AmfiProt_Amfitrack_IMU_t tempIMU;
+	lib_AmfiProt_Amfitrack_decodeIMU_i16(&sourceMeasurement.imu_data, &tempIMU);
+	IMU_t imu;
+	imu.Acceleration_X = tempIMU.acceleration_x_in_mg / 1000;
+	imu.Acceleration_Y = tempIMU.acceleration_y_in_mg / 1000;
+	imu.Acceleration_Z = tempIMU.acceleration_z_in_mg / 1000;
+	imu.Rotation_X = tempIMU.rotation_x_in_rad_per_sec;
+	imu.Rotation_Y = tempIMU.rotation_y_in_rad_per_sec;
+	imu.Rotation_Z = tempIMU.rotation_z_in_rad_per_sec;
+	AMFITRACK_Devices::getInstance().set(_deviceID, AMFITRACK_Devices::deviceType_t::Source, imu);
+
+	Source_Status_t status;
+	status.RSSI = -sourceMeasurement.rssi;
+	status.Temperature = (float)(((float)sourceMeasurement.temperature / 2) - 30);
 }
 
 void AmfiProt_API::lib_AmfiProt_Amfitrack_handle_SensorMeasurement(void *handle, lib_AmfiProt_Frame_t *frame, void *routing_handle)
@@ -86,13 +101,14 @@ void AmfiProt_API::lib_AmfiProt_Amfitrack_handle_SensorMeasurement(void *handle,
 
 	lib_AmfiProt_Amfitrack_Sensor_Measurement_t SensorMeasurement;
 	memcpy(&SensorMeasurement, &frame->payload[0], sizeof(lib_AmfiProt_Amfitrack_Sensor_Measurement_t));
+
 	lib_AmfiProt_Amfitrack_Pose_t tempPose;
 	lib_AmfiProt_Amfitrack_decode_pose_i24(&SensorMeasurement.pose, &tempPose);
-	lib_AmfiProt_Amfitrack_IMU_t tempIMU;
-	lib_AmfiProt_Amfitrack_decodeIMU_i16(&SensorMeasurement.imu_data, &tempIMU);
-
 	Pose_t pose = { tempPose.position_x_in_m, tempPose.position_y_in_m, tempPose.position_z_in_m, tempPose.orientation_x, tempPose.orientation_y, tempPose.orientation_z, tempPose.orientation_w };
 	AMFITRACK_Devices::getInstance().set(_deviceID, pose);
+
+	lib_AmfiProt_Amfitrack_IMU_t tempIMU;
+	lib_AmfiProt_Amfitrack_decodeIMU_i16(&SensorMeasurement.imu_data, &tempIMU);
 	IMU_t imu;
 	imu.Acceleration_X = tempIMU.acceleration_x_in_mg / 1000;
 	imu.Acceleration_Y = tempIMU.acceleration_y_in_mg / 1000;
@@ -100,8 +116,31 @@ void AmfiProt_API::lib_AmfiProt_Amfitrack_handle_SensorMeasurement(void *handle,
 	imu.Rotation_X = tempIMU.rotation_x_in_rad_per_sec;
 	imu.Rotation_Y = tempIMU.rotation_y_in_rad_per_sec;
 	imu.Rotation_Z = tempIMU.rotation_z_in_rad_per_sec;
-	AMFITRACK_Devices::getInstance().set(_deviceID, imu);
+	AMFITRACK_Devices::getInstance().set(_deviceID, AMFITRACK_Devices::deviceType_t::Sensor, imu);
+
 	AMFITRACK_Devices::getInstance().set(_deviceID, SensorMeasurement);
+
+	AMFITRACK_Sensor sensor;
+	AMFITRACK_Devices::getInstance().get_sensor_by_id(_deviceID, &sensor);
+
+	Sensor_Status_t status = sensor.status;
+	status.RSSI = -SensorMeasurement.rssi;
+	status.Temperature = (float)(((float)SensorMeasurement.temperature / 2) - 30);
+	status.Field_Quality = (SensorMeasurement.metal_distortion * 100) / 255;
+
+	status.Battery_Charging = (SensorMeasurement.sensor_status & (1U << 2)) != 0;
+	status.Source_Connected = (SensorMeasurement.sensor_status & (1U << 3)) != 0;
+	status.B_Field_Status = (BFieldStatus_t)((SensorMeasurement.sensor_status >> 4) & 0x07);
+	status.Pose_state = (PoseState_t)SensorMeasurement.sensor_state;
+	AMFITRACK_Devices::getInstance().set(_deviceID, status);
+
+	External_input_t extInput;
+	extInput.ADC_input = ((float)((SensorMeasurement.gpio_state >> 4) & 0x0FFF) / 1000);
+	extInput.GPIO_1 = (SensorMeasurement.gpio_state & (1 << 0)) ? 1 : 0;
+	extInput.GPIO_2 = (SensorMeasurement.gpio_state & (1 << 1)) ? 1 : 0;
+	extInput.GPIO_3 = (SensorMeasurement.gpio_state & (1 << 2)) ? 1 : 0;
+	extInput.GPIO_4 = (SensorMeasurement.gpio_state & (1 << 3)) ? 1 : 0;
+	AMFITRACK_Devices::getInstance().set(_deviceID, extInput);
 }
 
 void AmfiProt_API::lib_AmfiProt_Amfitrack_handle_SensorStatus(void *handle, lib_AmfiProt_Frame_t *frame, void *routing_handle)
@@ -111,7 +150,11 @@ void AmfiProt_API::lib_AmfiProt_Amfitrack_handle_SensorStatus(void *handle, lib_
 	uint8_t _deviceID = frame->header.source;
 	lib_AmfiProt_Amfitrack_Sensor_Status_t SensorStatus;
 	memcpy(&SensorStatus, &frame->payload[0], sizeof(lib_AmfiProt_Amfitrack_Sensor_Status_t));
-	Status_t status;
+
+	AMFITRACK_Sensor sensor;
+	AMFITRACK_Devices::getInstance().get_sensor_by_id(_deviceID, &sensor);
+
+	Sensor_Status_t status = sensor.status;
 	status.Battery_SOC = SensorStatus.bat_SOC;
 	AMFITRACK_Devices::getInstance().set(_deviceID, status);
 }

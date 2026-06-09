@@ -80,15 +80,18 @@ class AMFITRACK_Devices
 	bool set_hid(uint8_t device_id, deviceType_t type, hid_device *hidHandle);
 	bool set(uint8_t device_id, deviceType_t type, DeviceConfig_t const &config);
 
-	bool set(uint8_t device_id, Status_t const &status);
+	bool set(uint8_t device_id, deviceType_t type, IMU_t const &imu);
+
+	bool set(uint8_t device_id, Sensor_Status_t const &status);
+	bool set(uint8_t device_id, External_input_t const &ext_input);
 	bool set(uint8_t device_id, Pose_t const &pose);
-	bool set(uint8_t device_id, IMU_t const &imu);
 	bool set(uint8_t device_id, Raw_B_Field_t const &rawBfield);
 	bool set(uint8_t device_id, Normalized_B_Field_t const &normBfield);
 	bool set(uint8_t device_id, Raw_with_Phase_B_Field_t const &rawWithPhaseBfield);
 	// Deprecated!
 	bool set(uint8_t device_id, lib_AmfiProt_Amfitrack_Sensor_Measurement_t const &sensorMeasurement);
 
+	bool set(uint8_t device_id, Source_Status_t const &status);
 	bool set(uint8_t device_id, Current_t const &current);
 	bool set(uint8_t device_id, Frequency_t const &frequency);
 	bool set(uint8_t device_id, Voltage_t const &voltage);

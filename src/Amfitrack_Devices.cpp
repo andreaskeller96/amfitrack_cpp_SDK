@@ -587,7 +587,39 @@ bool AMFITRACK_Devices::set(uint8_t device_id, deviceType_t type, DeviceConfig_t
 	return true;
 }
 
-bool AMFITRACK_Devices::set(uint8_t device_id, Status_t const &status)
+bool AMFITRACK_Devices::set(uint8_t device_id, deviceType_t type, IMU_t const &imu)
+{
+	deviceType_t newType = type;
+	if (!is_valid_device_id(device_id))
+	{
+		return false;
+	}
+
+	if ((newType == deviceType_t::Both || newType == deviceType_t::None) && device_id_exist(device_id) == deviceType_t::None)
+		return false;
+
+#ifdef USE_THREAD_BASED
+	const std::lock_guard<std::mutex> lock(_mutex);
+#endif
+
+	newType = device_id_exist(device_id);
+
+	if (newType == deviceType_t::Sensor)
+	{
+		_sensors[device_id].imu = imu;
+	}
+	else if (newType == deviceType_t::Source)
+	{
+		_sources[device_id].imu = imu;
+	}
+
+	update_last_seen(device_id, newType);
+
+	update_last_seen(device_id, deviceType_t::Sensor);
+	return true;
+}
+
+bool AMFITRACK_Devices::set(uint8_t device_id, Sensor_Status_t const &status)
 {
 	if (!is_valid_device_id(device_id))
 	{
@@ -599,6 +631,22 @@ bool AMFITRACK_Devices::set(uint8_t device_id, Status_t const &status)
 #endif
 
 	_sensors[device_id].status = status;
+	update_last_seen(device_id, deviceType_t::Sensor);
+	return true;
+}
+
+bool AMFITRACK_Devices::set(uint8_t device_id, External_input_t const &ext_input)
+{
+	if (!is_valid_device_id(device_id))
+	{
+		return false;
+	}
+
+#ifdef USE_THREAD_BASED
+	const std::lock_guard<std::mutex> lock(_mutex);
+#endif
+
+	_sensors[device_id].external_input = ext_input;
 	update_last_seen(device_id, deviceType_t::Sensor);
 	return true;
 }
@@ -619,22 +667,6 @@ bool AMFITRACK_Devices::set(uint8_t device_id, Pose_t const &pose)
 #if defined(_WIN32) || defined(__linux__) || defined(__APPLE__)
 	_sensors[device_id].timestamp = std::chrono::steady_clock::now();
 #endif
-	return true;
-}
-
-bool AMFITRACK_Devices::set(uint8_t device_id, IMU_t const &imu)
-{
-	if (!is_valid_device_id(device_id))
-	{
-		return false;
-	}
-
-#ifdef USE_THREAD_BASED
-	const std::lock_guard<std::mutex> lock(_mutex);
-#endif
-
-	_sensors[device_id].imu = imu;
-	update_last_seen(device_id, deviceType_t::Sensor);
 	return true;
 }
 
@@ -699,6 +731,22 @@ bool AMFITRACK_Devices::set(uint8_t device_id, lib_AmfiProt_Amfitrack_Sensor_Mea
 
 	_sensors[device_id].sensorMeasurement = sensorMeasurement;
 	update_last_seen(device_id, deviceType_t::Sensor);
+	return true;
+}
+
+bool AMFITRACK_Devices::set(uint8_t device_id, Source_Status_t const &status)
+{
+	if (!is_valid_device_id(device_id))
+	{
+		return false;
+	}
+
+#ifdef USE_THREAD_BASED
+	const std::lock_guard<std::mutex> lock(_mutex);
+#endif
+
+	_sources[device_id].status = status;
+	update_last_seen(device_id, deviceType_t::Source);
 	return true;
 }
 

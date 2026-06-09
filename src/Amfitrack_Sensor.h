@@ -58,12 +58,12 @@ class AMFITRACK_Sensor
 
 	bool active;
 	uint8_t hub_ID;
-
 	uint16_t calcId;
 
 	hid_device *_dev_handle;
 
-	Status_t status;
+	Sensor_Status_t status;
+	External_input_t external_input;
 	Pose_t pose;
 	IMU_t imu;
 	Raw_B_Field_t rawBfield;

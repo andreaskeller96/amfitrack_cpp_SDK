@@ -58,6 +58,9 @@ class AMFITRACK_Source
 
 	hid_device *_dev_handle;
 
+	Source_Status_t status;
+	IMU_t imu;
+
 	Current_t current;
 	Frequency_t frequency;
 	Voltage_t voltage;
