@@ -607,8 +607,6 @@ bool AMFITRACK_Devices::set(uint8_t device_id, deviceType_t type, IMU_t const &i
 	}
 
 	update_last_seen(device_id, newType);
-
-	update_last_seen(device_id, deviceType_t::Sensor);
 	return true;
 }
 
