@@ -99,7 +99,7 @@ class HIDMonitor
 	HIDMonitorCallbacks _cb;
 
 	bool _initialized = false;
-	uint32_t _lastScanTime;
+	uint32_t _lastScanTime = 0;
 
 #ifdef USE_THREAD_BASED
 	mutable std::mutex _mutex;

@@ -201,6 +201,11 @@ bool HIDMonitor::shutdown()
 #ifdef USE_THREAD_BASED
 	std::lock_guard<std::mutex> lock(_mutex);
 #endif
+	if (!_initialized)
+	{
+		return true;
+	}
+
 	for (uint8_t i = 0; i < AMFITRACK::getInstance().get_sensors_active(); i++)
 	{
 		AMFITRACK_Sensor s;
@@ -208,7 +213,7 @@ bool HIDMonitor::shutdown()
 		if (s._dev_handle)
 		{
 			hid_close(s._dev_handle);
-			s._dev_handle = nullptr;
+			AMFITRACK_Devices::getInstance().set_hid(s.deviceId, AMFITRACK_Devices::deviceType_t::Sensor, nullptr);
 		}
 	}
 	for (uint8_t i = 0; i < AMFITRACK::getInstance().get_sources_active(); i++)
@@ -218,14 +223,11 @@ bool HIDMonitor::shutdown()
 		if (s._dev_handle)
 		{
 			hid_close(s._dev_handle);
-			s._dev_handle = nullptr;
+			AMFITRACK_Devices::getInstance().set_hid(s.deviceId, AMFITRACK_Devices::deviceType_t::Source, nullptr);
 		}
 	}
-	if (_initialized)
-	{
-		hid_exit();
-		_initialized = false;
-	}
+	hid_exit();
+	_initialized = false;
 	return true;
 }
 
@@ -294,10 +296,9 @@ void HIDMonitor::scanForPid(uint16_t pid)
 
 		if (it == _pendingDevices.end())
 		{
-			_pendingDevices[path] = PendingHIDDevice{
-				.pid = pid,
-				.firstSeen = now
-			};
+			_pendingDevices[path] = PendingHIDDevice();
+			_pendingDevices[path].pid = pid;
+			_pendingDevices[path].firstSeen = now;
 			continue;
 		}
 

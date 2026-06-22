@@ -93,18 +93,13 @@ AMFITRACK_Sensor *AMFITRACK_Devices::get_or_create_sensor(uint8_t device_id)
 		return nullptr;
 	}
 
-	if (device_id > 200)
-	{
-		LOG_D("Why?");
-	}
-
 	auto result = _sensors.emplace(device_id, AMFITRACK_Sensor(device_id));
 	return &result.first->second;
 }
 
 bool AMFITRACK_Devices::get_sensor_by_id(uint8_t device_id, AMFITRACK_Sensor *sensor)
 {
-	if ((sensor == nullptr) || !is_valid_device_id(device_id) || device_id_exist(device_id) == deviceType_t::None)
+	if ((sensor == nullptr) || !is_valid_device_id(device_id))
 	{
 		AMFITRACK_Sensor emptySensor;
 		*sensor = emptySensor;
@@ -128,7 +123,7 @@ bool AMFITRACK_Devices::get_sensor_by_id(uint8_t device_id, AMFITRACK_Sensor *se
 
 bool AMFITRACK_Devices::get_source_by_id(uint8_t device_id, AMFITRACK_Source *source)
 {
-	if ((source == nullptr) || !is_valid_device_id(device_id) || device_id_exist(device_id) == deviceType_t::None)
+	if ((source == nullptr) || !is_valid_device_id(device_id))
 	{
 		AMFITRACK_Source emptySource;
 		*source = emptySource;
@@ -224,8 +219,7 @@ uint8_t AMFITRACK_Devices::get_numer_of_sources()
 
 bool AMFITRACK_Devices::is_device_active(uint8_t device_id)
 {
-	deviceType_t type = device_id_exist(device_id);
-	if (!is_valid_device_id(device_id) || type == deviceType_t::None)
+	if (!is_valid_device_id(device_id))
 	{
 		return false;
 	}
@@ -235,13 +229,14 @@ bool AMFITRACK_Devices::is_device_active(uint8_t device_id)
 #ifdef USE_THREAD_BASED
 	const std::lock_guard<std::mutex> lock(_mutex);
 #endif
+	deviceType_t type = device_id_exist(device_id);
 	if (type == deviceType_t::Sensor)
 	{
-		isActive = _sensors[device_id].active;
+		isActive = _sensors.at(device_id).active;
 	}
 	else if (type == deviceType_t::Source)
 	{
-		isActive = _sources[device_id].active;
+		isActive = _sources.at(device_id).active;
 	}
 
 	return isActive;
@@ -255,12 +250,12 @@ bool AMFITRACK_Devices::set(uint8_t device_id, deviceType_t type, bool isActive)
 		return false;
 	}
 
-	if ((newType == deviceType_t::Both || newType == deviceType_t::None) && device_id_exist(device_id) == deviceType_t::None)
-		return false;
-
 #ifdef USE_THREAD_BASED
 	const std::lock_guard<std::mutex> lock(_mutex);
 #endif
+
+	if ((newType == deviceType_t::Both || newType == deviceType_t::None) && device_id_exist(device_id) == deviceType_t::None)
+		return false;
 
 	if (newType == deviceType_t::Both || newType == deviceType_t::None)
 		newType = device_id_exist(device_id);
@@ -327,12 +322,12 @@ bool AMFITRACK_Devices::set(uint8_t device_id, deviceType_t type, char const *na
 		return false;
 	}
 
-	if ((newType == deviceType_t::Both || newType == deviceType_t::None) && device_id_exist(device_id) == deviceType_t::None)
-		return false;
-
 #ifdef USE_THREAD_BASED
 	const std::lock_guard<std::mutex> lock(_mutex);
 #endif
+
+	if ((newType == deviceType_t::Both || newType == deviceType_t::None) && device_id_exist(device_id) == deviceType_t::None)
+		return false;
 
 	if (newType == deviceType_t::Both || newType == deviceType_t::None)
 		newType = device_id_exist(device_id);
@@ -376,12 +371,12 @@ bool AMFITRACK_Devices::set(uint8_t device_id, deviceType_t type, uint32_t UUID1
 		return false;
 	}
 
-	if ((newType == deviceType_t::Both || newType == deviceType_t::None) && device_id_exist(device_id) == deviceType_t::None)
-		return false;
-
 #ifdef USE_THREAD_BASED
 	const std::lock_guard<std::mutex> lock(_mutex);
 #endif
+
+	if ((newType == deviceType_t::Both || newType == deviceType_t::None) && device_id_exist(device_id) == deviceType_t::None)
+		return false;
 
 	if (newType == deviceType_t::Both || newType == deviceType_t::None)
 		newType = device_id_exist(device_id);
@@ -411,12 +406,12 @@ bool AMFITRACK_Devices::set(uint8_t device_id, deviceType_t type, FW_t fwVersion
 		return false;
 	}
 
-	if ((newType == deviceType_t::Both || newType == deviceType_t::None) && device_id_exist(device_id) == deviceType_t::None)
-		return false;
-
 #ifdef USE_THREAD_BASED
 	const std::lock_guard<std::mutex> lock(_mutex);
 #endif
+
+	if ((newType == deviceType_t::Both || newType == deviceType_t::None) && device_id_exist(device_id) == deviceType_t::None)
+		return false;
 
 	if (newType == deviceType_t::Both || newType == deviceType_t::None)
 		newType = device_id_exist(device_id);
@@ -442,12 +437,12 @@ bool AMFITRACK_Devices::set(uint8_t device_id, deviceType_t type, RF_t rfVersion
 		return false;
 	}
 
-	if ((newType == deviceType_t::Both || newType == deviceType_t::None) && device_id_exist(device_id) == deviceType_t::None)
-		return false;
-
 #ifdef USE_THREAD_BASED
 	const std::lock_guard<std::mutex> lock(_mutex);
 #endif
+
+	if ((newType == deviceType_t::Both || newType == deviceType_t::None) && device_id_exist(device_id) == deviceType_t::None)
+		return false;
 
 	if (newType == deviceType_t::Both || newType == deviceType_t::None)
 		newType = device_id_exist(device_id);
@@ -473,12 +468,12 @@ bool AMFITRACK_Devices::set(uint8_t device_id, deviceType_t type, HW_t hwVersion
 		return false;
 	}
 
-	if ((newType == deviceType_t::Both || newType == deviceType_t::None) && device_id_exist(device_id) == deviceType_t::None)
-		return false;
-
 #ifdef USE_THREAD_BASED
 	const std::lock_guard<std::mutex> lock(_mutex);
 #endif
+
+	if ((newType == deviceType_t::Both || newType == deviceType_t::None) && device_id_exist(device_id) == deviceType_t::None)
+		return false;
 
 	if (newType == deviceType_t::Both || newType == deviceType_t::None)
 		newType = device_id_exist(device_id);
@@ -504,12 +499,12 @@ bool AMFITRACK_Devices::set(uint8_t device_id, deviceType_t type, uint8_t hubId)
 		return false;
 	}
 
-	if ((newType == deviceType_t::Both || newType == deviceType_t::None) && device_id_exist(device_id) == deviceType_t::None)
-		return false;
-
 #ifdef USE_THREAD_BASED
 	const std::lock_guard<std::mutex> lock(_mutex);
 #endif
+
+	if ((newType == deviceType_t::Both || newType == deviceType_t::None) && device_id_exist(device_id) == deviceType_t::None)
+		return false;
 
 	if (newType == deviceType_t::Both || newType == deviceType_t::None)
 		newType = device_id_exist(device_id);
@@ -558,12 +553,12 @@ bool AMFITRACK_Devices::set(uint8_t device_id, deviceType_t type, DeviceConfig_t
 		return false;
 	}
 
-	if ((newType == deviceType_t::Both || newType == deviceType_t::None) && device_id_exist(device_id) == deviceType_t::None)
-		return false;
-
 #ifdef USE_THREAD_BASED
 	const std::lock_guard<std::mutex> lock(_mutex);
 #endif
+
+	if ((newType == deviceType_t::Both || newType == deviceType_t::None) && device_id_exist(device_id) == deviceType_t::None)
+		return false;
 
 	newType = device_id_exist(device_id);
 
@@ -588,12 +583,12 @@ bool AMFITRACK_Devices::set(uint8_t device_id, deviceType_t type, IMU_t const &i
 		return false;
 	}
 
-	if ((newType == deviceType_t::Both || newType == deviceType_t::None) && device_id_exist(device_id) == deviceType_t::None)
-		return false;
-
 #ifdef USE_THREAD_BASED
 	const std::lock_guard<std::mutex> lock(_mutex);
 #endif
+
+	if ((newType == deviceType_t::Both || newType == deviceType_t::None) && device_id_exist(device_id) == deviceType_t::None)
+		return false;
 
 	newType = device_id_exist(device_id);
 
