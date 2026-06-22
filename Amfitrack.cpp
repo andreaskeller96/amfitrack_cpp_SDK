@@ -19,11 +19,13 @@
 #include "Amfitrack_task.h"
 #include "HID_Monitor.h"
 
+#include <atomic>
 #include <memory>
 #include <utility>
 
 #ifdef USE_THREAD_BASED
-#include "thread"
+#include <mutex>
+#include <thread>
 #endif
 
 //-----------------------------------------------------------------------------
@@ -41,7 +43,11 @@
 //-----------------------------------------------------------------------------
 static AmfiProt_API *amfiprot_api = nullptr;
 static std::unique_ptr<HIDMonitor> hid_monitor = nullptr;
-volatile static bool stop_running = false;
+static std::atomic<bool> stop_running{false};
+#ifdef USE_THREAD_BASED
+static std::thread background_thread;
+static std::mutex background_thread_mutex;
+#endif
 //-----------------------------------------------------------------------------
 // Section: Function prototypes
 //-----------------------------------------------------------------------------
@@ -61,7 +67,7 @@ static void _run_all_amfitrack()
 void AMFITRACK::background_amfitrack_task(AMFITRACK *inst)
 {
 	(void)inst;
-	while (!stop_running)
+	while (!stop_running.load(std::memory_order_acquire))
 	{
 		_run_all_amfitrack();
 	}
@@ -99,8 +105,8 @@ void AMFITRACK::init()
 		};
 
 		hid_monitor = std::make_unique<HIDMonitor>(std::move(cb));
-		hid_monitor->init();
 	}
+	hid_monitor->init();
 #endif
 	amfitrack_task::init();
 }
@@ -108,18 +114,42 @@ void AMFITRACK::init()
 void AMFITRACK::start_task()
 {
 
-	stop_running = false;
 #ifdef USE_THREAD_BASED
-	// Create a thread object
-	std::thread background_thread(background_amfitrack_task, this);
+	const std::lock_guard<std::mutex> lock(background_thread_mutex);
+	if (background_thread.joinable())
+	{
+		return;
+	}
 
-	background_thread.detach();
+	stop_running.store(false, std::memory_order_release);
+	background_thread = std::thread(background_amfitrack_task, this);
 #endif
 }
 
 void AMFITRACK::stop_task()
 {
-	stop_running = true;
+	stop_running.store(true, std::memory_order_release);
+#ifdef USE_THREAD_BASED
+	std::thread thread_to_join;
+	{
+		const std::lock_guard<std::mutex> lock(background_thread_mutex);
+		if (background_thread.joinable())
+		{
+			thread_to_join = std::move(background_thread);
+		}
+	}
+
+	if (thread_to_join.joinable())
+	{
+		thread_to_join.join();
+	}
+#endif
+#ifdef USE_USB
+	if (hid_monitor)
+	{
+		hid_monitor->shutdown();
+	}
+#endif
 }
 
 void AMFITRACK::run()
