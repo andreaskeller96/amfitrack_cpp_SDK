@@ -13,6 +13,7 @@
 
 #include "Amfitrack_Devices.h"
 #include "Amfitrack_Sensor.h"
+#include "Amfitrack_Source.h"
 #include "lib_AmfiProt_API.hpp"
 #include "lib_log.h"
 #include "lib_time.h"
@@ -136,13 +137,22 @@ void sanitize(DeviceConfig_t &config)
 DeviceConfig_t load_config(uint8_t device_id)
 {
 	DeviceConfig_t config = {};
-	AMFITRACK_Sensor sensor;
+	AMFITRACK_Devices &devices = AMFITRACK_Devices::getInstance();
 
-	if (AMFITRACK_Devices::getInstance().get_sensor_by_id(device_id, &sensor))
+	AMFITRACK_Sensor sensor;
+	AMFITRACK_Source source;
+
+	if (devices.get_sensor_by_id(device_id, &sensor))
 	{
 		config = sensor.config;
 		sanitize(config);
-		LOG_D("load_config: device_id=%u, categoryCount=%u", device_id, config.categoryCount);
+		LOG_D("load_config: device_id=%u (sensor), categoryCount=%u", device_id, config.categoryCount);
+	}
+	else if (devices.get_source_by_id(device_id, &source))
+	{
+		config = source.config;
+		sanitize(config);
+		LOG_D("load_config: device_id=%u (source), categoryCount=%u", device_id, config.categoryCount);
 	}
 	else
 	{

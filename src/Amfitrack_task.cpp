@@ -70,39 +70,24 @@ void amfitrack_task::getMissingInfo()
 	if (lastGetMissingInfoTimeMs == 0 ||
 		(now - lastGetMissingInfoTimeMs) >= kGetMissingInfoIntervalMs)
 	{
+		// Sensors and sources expose the same version/name fields, so both kinds
+		// are queried for whatever info is currently missing.
 		for (uint8_t i = 0; i < AMFITRACK_DEVICE_COUNT; i++)
 		{
 			AMFITRACK_Sensor sensor;
 			AMFITRACK_Devices::getInstance().get_sensor_by_id(i, &sensor);
-			if (!sensor.active)
-				continue;
-
-			switch (missingInfo)
+			if (sensor.active)
 			{
-				case amfitrack_task::missingInfo_t::missingInfo_FW:
-					if (sensor.FW_Version.Major == 0)
-					{
-						getVersion(i, AMFITRACK_FW_VERSION_ID);
-					}
-					break;
-				case amfitrack_task::missingInfo_t::missingInfo_RF:
-					if (sensor.RF_Version.Major == 0)
-					{
-						getVersion(i, AMFITRACK_RF_VERSION_ID);
-					}
-					break;
-				case amfitrack_task::missingInfo_t::missingInfo_HW:
-					if (sensor.HW_Version.Generation == 0)
-					{
-						getVersion(i, AMFITRACK_HW_VERSION_ID);
-					}
-					break;
-				case amfitrack_task::missingInfo_t::missingInfo_Name:
-					if (sensor.name[0] == 0x00)
-					{
-						getName(i);
-					}
-					break;
+				requestMissingInfo(i, sensor.FW_Version, sensor.RF_Version,
+								   sensor.HW_Version, sensor.name);
+			}
+
+			AMFITRACK_Source source;
+			AMFITRACK_Devices::getInstance().get_source_by_id(i, &source);
+			if (source.active)
+			{
+				requestMissingInfo(i, source.FW_Version, source.RF_Version,
+								   source.HW_Version, source.name);
 			}
 		}
 		switch (missingInfo)
@@ -121,6 +106,38 @@ void amfitrack_task::getMissingInfo()
 				break;
 		}
 		lastGetMissingInfoTimeMs = now;
+	}
+}
+
+void amfitrack_task::requestMissingInfo(uint8_t deviceID, const FW_t &fw, const RF_t &rf,
+										const HW_t &hw, const char *name)
+{
+	switch (missingInfo)
+	{
+		case amfitrack_task::missingInfo_t::missingInfo_FW:
+			if (fw.Major == 0)
+			{
+				getVersion(deviceID, AMFITRACK_FW_VERSION_ID);
+			}
+			break;
+		case amfitrack_task::missingInfo_t::missingInfo_RF:
+			if (rf.Major == 0)
+			{
+				getVersion(deviceID, AMFITRACK_RF_VERSION_ID);
+			}
+			break;
+		case amfitrack_task::missingInfo_t::missingInfo_HW:
+			if (hw.Generation == 0)
+			{
+				getVersion(deviceID, AMFITRACK_HW_VERSION_ID);
+			}
+			break;
+		case amfitrack_task::missingInfo_t::missingInfo_Name:
+			if (name[0] == 0x00)
+			{
+				getName(deviceID);
+			}
+			break;
 	}
 }
 

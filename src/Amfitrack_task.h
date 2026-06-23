@@ -12,6 +12,7 @@
 // Section: Includes
 //-----------------------------------------------------------------------------
 #include <cstdint>
+#include "AmfitrackDeviceTypes.h"
 //-----------------------------------------------------------------------------
 // Section: Define
 //-----------------------------------------------------------------------------
@@ -52,6 +53,8 @@ class amfitrack_task
 	static void getVersion(uint8_t deviceID, uint8_t _version);
 	static void getName(uint8_t deviceID);
 	static void getMissingInfo();
+	static void requestMissingInfo(uint8_t deviceID, const FW_t &fw, const RF_t &rf,
+								   const HW_t &hw, const char *name);
 	static missingInfo_t missingInfo;
 };
 
