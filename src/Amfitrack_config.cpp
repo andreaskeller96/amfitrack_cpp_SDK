@@ -857,7 +857,8 @@ static void log_parameter_value(const lib_Generic_Parameter_Value &value)
 	switch (static_cast<lib_Generic_Parameter_Type_t>(value.type))
 	{
 		case lib_Generic_Parameter_Type_void:
-			LOG_I("        value=(void)");
+			// void carries a bool byte (see lib_Generic_Parameter): show it.
+			LOG_I("        value=(void/bool)%s", value.b ? "true" : "false");
 			break;
 		case lib_Generic_Parameter_Type_bool:
 			LOG_I("        value=(bool)%s", value.b ? "true" : "false");
