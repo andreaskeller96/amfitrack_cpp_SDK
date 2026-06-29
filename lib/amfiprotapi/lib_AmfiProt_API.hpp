@@ -141,7 +141,7 @@ class AmfiProt_API : public lib_AmfiProt, public lib_AmfiProt_AmfiTrack
 
 	void process_incoming_queue(void);
 
-	uint8_t packetNumber[255];
+	uint8_t packetNumber[256];
 
 	uint8_t _retransmitCount;
 	bool _lastPackageNumberError;
