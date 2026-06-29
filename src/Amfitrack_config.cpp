@@ -608,6 +608,17 @@ bool AMFITRACK_Config::set(uint8_t device_id, lib_AmfiProt_ConfigValueUID_t cons
 
 bool AMFITRACK_Config::request_current()
 {
+	// abort discovery if a device disconnects while config is being discovered - previously it would keep retrying forever
+	if (_state != CONFIG_DISCOVERY_IDLE && _state != CONFIG_DISCOVERY_DONE &&
+		!AMFITRACK_Devices::getInstance().is_device_active(_device_id))
+	{
+		LOG_W("request_current: device %u no longer active, aborting discovery (state=%d)",
+			  _device_id, (int)_state);
+		_state = CONFIG_DISCOVERY_IDLE;
+		set_waiting_for_reply(false);
+		return false;
+	}
+
 	if (_waiting_for_reply)
 	{
 		const uint32_t now = lib_time::get_time_ms();
