@@ -148,14 +148,20 @@ void AmfiProt_API::lib_AmfiProt_Amfitrack_handle_SensorStatus(void *handle, lib_
 	(void)handle;
 	(void)routing_handle;
 	uint8_t _deviceID = frame->header.source;
-	lib_AmfiProt_Amfitrack_Sensor_Status_t SensorStatus;
-	memcpy(&SensorStatus, &frame->payload[0], sizeof(lib_AmfiProt_Amfitrack_Sensor_Status_t));
+	uint8_t _frameLen = frame->header.length;
+	lib_AmfiProt_Amfitrack_Sensor_Status_t SensorStatus = {};
+	memcpy(&SensorStatus, &frame->payload[0], _frameLen);
 
 	AMFITRACK_Sensor sensor;
 	AMFITRACK_Devices::getInstance().get_sensor_by_id(_deviceID, &sensor);
 
 	Sensor_Status_t status = sensor.status;
 	status.Battery_SOC = SensorStatus.bat_SOC;
+	if (_frameLen == sizeof(lib_AmfiProt_Amfitrack_Sensor_Status_t))
+	{
+		status.App_state = (AppState_t)SensorStatus.sensor_appState;
+	}	
+
 	AMFITRACK_Devices::getInstance().set(_deviceID, status);
 }
 

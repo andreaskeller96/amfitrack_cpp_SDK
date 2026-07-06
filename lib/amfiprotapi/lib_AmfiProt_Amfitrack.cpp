@@ -81,7 +81,7 @@ void lib_AmfiProt_AmfiTrack::lib_AmfiProt_Amfitrack_processFrame(void *handle, l
 		break;
 		case lib_AmfiProt_Amfitrack_PayloadType_Sensor_Status:
 		{
-			if (frame->header.length == sizeof(lib_AmfiProt_Amfitrack_Sensor_Status_t))
+			if (frame->header.length <= sizeof(lib_AmfiProt_Amfitrack_Sensor_Status_t))
 			{
 				lib_AmfiProt_Amfitrack_handle_SensorStatus(handle, frame, routing_handle);
 			}

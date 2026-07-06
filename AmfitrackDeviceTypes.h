@@ -43,6 +43,18 @@ typedef enum
 	POSE_STATE_TRACKING_VERIFYING_HEMISPHERE = 8
 } PoseState_t;
 
+typedef enum
+{
+	APP_STATE_POWERUP = 0,
+	APP_STATE_INITIALIZE = 1,
+	APP_STATE_RUNNING = 2,
+	APP_STATE_CHARGING = 3,
+	APP_STATE_POWERDOWN = 4,
+	APP_STATE_FIRMWAREUPDATE = 5,
+	APP_STATE_LAST,
+} AppState_t;
+
+
 //-----------------------------------------------------------------------------
 // General struct types
 //-----------------------------------------------------------------------------
@@ -113,8 +125,9 @@ typedef struct
 	uint8_t Field_Quality;
 
 	bool Source_Connected;
-	BFieldStatus_t B_Field_Status;
-	PoseState_t Pose_state;
+	BFieldStatus_t 	B_Field_Status;
+	PoseState_t 	Pose_state;
+	AppState_t 		App_state;
 } Sensor_Status_t;
 
 typedef struct

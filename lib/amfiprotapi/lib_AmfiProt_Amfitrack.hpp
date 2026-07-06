@@ -263,6 +263,9 @@ typedef __PACKED_STRUCT
 
 	/** Frame ID */
 	lib_AmfiProt_Amfitrack_FrameID_24b_t frame_id;
+	
+	/** Application state (see \ref AppState_t) */
+	uint8_t sensor_appState;
 }
 lib_AmfiProt_Amfitrack_Sensor_Status_t;
 
