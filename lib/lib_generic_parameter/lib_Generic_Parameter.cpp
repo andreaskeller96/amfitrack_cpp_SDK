@@ -8,9 +8,9 @@ static uint8_t lib_Generic_Parameter_ValueSizeWithoutType(
 {
 	switch (value.type)
 	{
+		// void is carried as a bool: the device firmware encodes void as a single bool byte
+		// we have to reserve, compare and serialize that byte just like an explicit bool
 		case lib_Generic_Parameter_Type_void:
-			return sizeof(value.b); // Legacy compatibility
-
 		case lib_Generic_Parameter_Type_bool:
 		case lib_Generic_Parameter_Type_ProcedureCall:
 			return sizeof(value.b);
@@ -72,9 +72,9 @@ bool lib_Generic_Parameter_ValueIsEqual(
 
 	switch (v1.type)
 	{
+		// void is compared as a bool (see size function): the trailing byte is
+		// significant, so do not treat all void values as equal.
 		case lib_Generic_Parameter_Type_void:
-			return true;
-
 		case lib_Generic_Parameter_Type_bool:
 		case lib_Generic_Parameter_Type_ProcedureCall:
 			return v1.b == v2.b;
@@ -163,12 +163,10 @@ uint8_t lib_Generic_Parameter_SerializeValueAndType(
 
 	switch (value.type)
 	{
+		// void is serialized as a bool: size function reserves a byte for it, so
+		// we must actually copy value.b (the old code reported the size but left
+		// the byte uninitialized).
 		case lib_Generic_Parameter_Type_void:
-			// Legacy compatibility:
-			// old implementation reported type + bool size for void,
-			// but did not copy a value.
-			break;
-
 		case lib_Generic_Parameter_Type_bool:
 		case lib_Generic_Parameter_Type_ProcedureCall:
 			std::memcpy(dest, &value.b, valueSize);
