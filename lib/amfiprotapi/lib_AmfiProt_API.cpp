@@ -91,16 +91,24 @@ void AmfiProt_API::process_incoming_queue(void)
 
 void AmfiProt_API::clear_isTransmitting(lib_AmfiProt_Frame_t *frame)
 {
-	if (frame->header.packetNumber == this->packetNumber[frame->header.source])
+	lib_AmfiProt_Frame_t *inFlight = outgoingBulk_FiFo.peek();
+
+	if (inFlight == nullptr)
 	{
-		if (!outgoingBulk_FiFo.isEmpty())
-		{
-			lib_AmfiProt_Frame_t frame;
-			outgoingBulk_FiFo.pop(frame);
-		}
-		this->_retransmitCount = 0;
-		this->isTransmitting = false;
+		return;
 	}
+
+	// The ack must come from the device this frame was addressed to.
+	if (inFlight->header.packetNumber != frame->header.packetNumber ||
+		inFlight->header.destination != frame->header.source)
+	{
+		return;
+	}
+
+	lib_AmfiProt_Frame_t acked;
+	outgoingBulk_FiFo.pop(acked);
+	this->_retransmitCount = 0;
+	this->isTransmitting = false;
 }
 
 bool AmfiProt_API::queue_frame(void const *payload, uint8_t length, uint8_t payloadType, lib_AmfiProt_packetType_t packetType, uint8_t destination)
