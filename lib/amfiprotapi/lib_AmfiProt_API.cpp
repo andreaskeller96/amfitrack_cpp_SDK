@@ -36,6 +36,9 @@
 // Variables and constants
 //-----------------------------------------------------------------------------
 
+// Time in ms until transmit is counted as timed out
+static constexpr std::chrono::milliseconds kRetransmitTimeout{1000};
+
 //-----------------------------------------------------------------------------
 // Functions
 //-----------------------------------------------------------------------------
@@ -69,7 +72,7 @@ void AmfiProt_API::isRequestAckSet(bool removeFromQueue)
 	if (controlBits)
 	{
 		this->isTransmitting = true;
-		time(&_retransmitTimer);
+		_retransmitTimer = std::chrono::steady_clock::now();
 	}
 	else
 	{
@@ -180,11 +183,9 @@ void AmfiProt_API::set_transmit_ongoing_and_check_respons_request(bool removeFro
 void AmfiProt_API::amfiprot_run(void)
 {
 	this->process_incoming_queue();
-	static time_t current_timer;
-	time(&current_timer);
-	double diffTime = difftime(current_timer, _retransmitTimer);
 
-	if (this->isTransmitting && (diffTime >= 1.0))
+	if (this->isTransmitting &&
+		(std::chrono::steady_clock::now() - _retransmitTimer) >= kRetransmitTimeout)
 	{
 		this->_retransmitCount++;
 		if (this->_retransmitCount >= 3)
