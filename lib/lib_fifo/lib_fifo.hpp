@@ -16,6 +16,10 @@
 #include <array>
 #include <cstddef>
 
+#ifdef USE_THREAD_BASED
+#include <mutex>
+#endif
+
 //-----------------------------------------------------------------------------
 // Section: Define
 //-----------------------------------------------------------------------------
@@ -36,6 +40,8 @@
 // Section: Class
 //-----------------------------------------------------------------------------
 
+// Locked under USE_THREAD_BASED: two threads queue frames while a third drains,
+// and an unlocked count++/count-- loses updates, silently dropping frames.
 template <typename T, std::size_t Capacity>
 class lib_fifo
 {
@@ -60,12 +66,26 @@ class lib_fifo
   private:
 	std::size_t increment(std::size_t index) const;
 
+	// Unlocked forms, for use where the lock is already held.
+	bool full() const { return count >= Capacity; }
+	bool empty() const { return count == 0; }
+
 	std::array<T, Capacity> buffer{};
 
 	std::size_t head{ 0 };
 	std::size_t tail{ 0 };
 	std::size_t count{ 0 };
+
+#ifdef USE_THREAD_BASED
+	mutable std::mutex _mutex;
+#endif
 };
+
+#ifdef USE_THREAD_BASED
+#define LIB_FIFO_LOCK() const std::lock_guard<std::mutex> _lock(_mutex)
+#else
+#define LIB_FIFO_LOCK() ((void)0)
+#endif
 
 //-----------------------------------------------------------------------------
 // Section: Template implementation
@@ -74,7 +94,9 @@ class lib_fifo
 template <typename T, std::size_t Capacity>
 bool lib_fifo<T, Capacity>::put(const T &item)
 {
-	if (isFull())
+	LIB_FIFO_LOCK();
+
+	if (full())
 	{
 		return false;
 	}
@@ -89,7 +111,9 @@ bool lib_fifo<T, Capacity>::put(const T &item)
 template <typename T, std::size_t Capacity>
 bool lib_fifo<T, Capacity>::pop(T &item)
 {
-	if (isEmpty())
+	LIB_FIFO_LOCK();
+
+	if (empty())
 	{
 		return false;
 	}
@@ -104,7 +128,9 @@ bool lib_fifo<T, Capacity>::pop(T &item)
 template <typename T, std::size_t Capacity>
 bool lib_fifo<T, Capacity>::peek(T &item) const
 {
-	if (isEmpty())
+	LIB_FIFO_LOCK();
+
+	if (empty())
 	{
 		return false;
 	}
@@ -114,10 +140,13 @@ bool lib_fifo<T, Capacity>::peek(T &item) const
 	return true;
 }
 
+// Pointer outlives the lock; safe only for the popping thread, and not across its own pop().
 template <typename T, std::size_t Capacity>
 T *lib_fifo<T, Capacity>::peek()
 {
-	if (isEmpty())
+	LIB_FIFO_LOCK();
+
+	if (empty())
 	{
 		return nullptr;
 	}
@@ -128,7 +157,9 @@ T *lib_fifo<T, Capacity>::peek()
 template <typename T, std::size_t Capacity>
 const T *lib_fifo<T, Capacity>::peek() const
 {
-	if (isEmpty())
+	LIB_FIFO_LOCK();
+
+	if (empty())
 	{
 		return nullptr;
 	}
@@ -139,6 +170,8 @@ const T *lib_fifo<T, Capacity>::peek() const
 template <typename T, std::size_t Capacity>
 void lib_fifo<T, Capacity>::clear()
 {
+	LIB_FIFO_LOCK();
+
 	head = 0;
 	tail = 0;
 	count = 0;
@@ -147,18 +180,24 @@ void lib_fifo<T, Capacity>::clear()
 template <typename T, std::size_t Capacity>
 bool lib_fifo<T, Capacity>::isFull() const
 {
-	return count >= Capacity;
+	LIB_FIFO_LOCK();
+
+	return full();
 }
 
 template <typename T, std::size_t Capacity>
 bool lib_fifo<T, Capacity>::isEmpty() const
 {
-	return count == 0;
+	LIB_FIFO_LOCK();
+
+	return empty();
 }
 
 template <typename T, std::size_t Capacity>
 std::size_t lib_fifo<T, Capacity>::size() const
 {
+	LIB_FIFO_LOCK();
+
 	return count;
 }
 
@@ -171,6 +210,8 @@ constexpr std::size_t lib_fifo<T, Capacity>::capacity() const
 template <typename T, std::size_t Capacity>
 std::size_t lib_fifo<T, Capacity>::remaining() const
 {
+	LIB_FIFO_LOCK();
+
 	return Capacity - count;
 }
 
