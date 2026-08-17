@@ -198,6 +198,25 @@ uint8_t AMFITRACK::get_sources_active() const
 	return AMFITRACK_Devices::getInstance().get_numer_of_sources();
 }
 
+void AMFITRACK::set_firmware_apply_serial(const std::string &usbSerial)
+{
+#if defined(USE_USB)
+	if (hid_monitor)
+		hid_monitor->set_firmware_apply(usbSerial);
+#else
+	(void)usbSerial;
+#endif
+}
+
+std::vector<std::string> AMFITRACK::get_bootloader_serials() const
+{
+#if defined(USE_USB)
+	if (hid_monitor)
+		return hid_monitor->bootloader_serials();
+#endif
+	return {};
+}
+
 bool AMFITRACK::setConfiguration(uint8_t DeviceID, uint32_t UID, lib_Generic_Parameter_Value_t parameter)
 {
 	return AMFITRACK_Config::getInstance().setConfiguration(DeviceID, UID, parameter);

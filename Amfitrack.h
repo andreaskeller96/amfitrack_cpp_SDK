@@ -19,6 +19,8 @@
 #include "lib_AmfiProt_API.hpp"
 
 #include <cstdint>
+#include <string>
+#include <vector>
 //-----------------------------------------------------------------------------
 // Section: Define
 //-----------------------------------------------------------------------------
@@ -53,6 +55,13 @@ class AMFITRACK
 	bool get_source_by_number(uint8_t device_number, AMFITRACK_Source *source) const;
 	uint8_t get_sensors_active() const;
 	uint8_t get_sources_active() const;
+
+	// Silence this USB serial until its application re-enumerates (empty
+	// closes): a bootloader that receives any packet stops applying the image.
+	void set_firmware_apply_serial(const std::string &usbSerial);
+
+	// Devices in their bootloader; they are in neither the sensor nor source list.
+	std::vector<std::string> get_bootloader_serials() const;
 
 	bool setConfiguration(uint8_t DeviceID, uint32_t UID, lib_Generic_Parameter_Value_t parameter);
 	bool getConfiguration(uint8_t DeviceID, bool force_all = false);

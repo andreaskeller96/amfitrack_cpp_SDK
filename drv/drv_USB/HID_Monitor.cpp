@@ -45,6 +45,15 @@ struct PendingHIDDevice
 	uint32_t firstSeen;
 };
 
+// USB serial numbers are ASCII hex, so a plain narrowing is enough.
+static std::string narrowSerial(const wchar_t *w)
+{
+	std::string s;
+	for (; w != nullptr && *w != L'\0'; ++w)
+		s.push_back(*w > 0 && *w < 128 ? static_cast<char>(*w) : '?');
+	return s;
+}
+
 std::unordered_map<std::string, PendingHIDDevice> _pendingDevices;
 static constexpr uint32_t kProbeDelayMs = 500;
 
@@ -79,14 +88,14 @@ static bool parseNameReply(const lib_AmfiProt_Frame_t &f, char *buf, size_t bufS
 }
 
 // Shared probe logic — used by both probeSensorIdentity and probeSourceIdentity
-static bool probeDeviceIdentity(hid_device *handle,
-								std::function<int(hid_device *, const void *, size_t)> writeFn,
-								std::function<int(hid_device *, void *, int)> readFn,
-								uint8_t &deviceIdOut,
-								uint32_t uuidOut[3],
-								char *nameOut,
-								size_t nameSize,
-								const char *requiredNamePart = nullptr)
+static ProbeResult probeDeviceIdentity(hid_device *handle,
+									   std::function<int(hid_device *, const void *, size_t)> writeFn,
+									   std::function<int(hid_device *, void *, int)> readFn,
+									   uint8_t &deviceIdOut,
+									   uint32_t uuidOut[3],
+									   char *nameOut,
+									   size_t nameSize,
+									   const char *requiredNamePart = nullptr)
 {
 	AmfiProt_API &api = AmfiProt_API::getInstance();
 	lib_AmfiProt_Frame_t txFrame{}, rxFrame{};
@@ -106,7 +115,7 @@ static bool probeDeviceIdentity(hid_device *handle,
 	std::memcpy(packet, &txFrame, api.lib_AmfiProt_FrameSize(&txFrame));
 
 	if (writeFn(handle, packet, api.lib_AmfiProt_FrameSize(&txFrame)) < 0)
-		return false;
+		return ProbeResult::NoReply;
 
 	for (int i = 0; i < kProbeMaxAttempts; ++i)
 	{
@@ -130,6 +139,10 @@ static bool probeDeviceIdentity(hid_device *handle,
 		uuidOut[1] = 0;
 		uuidOut[2] = 0;
 
+		// Before the type filter, which a bootloader would never pass.
+		if (std::strcmp(nameOut, kBootloaderName) == 0)
+			return ProbeResult::Bootloader;
+
 		// Optional name filter, e.g. "source"
 		if (requiredNamePart != nullptr)
 		{
@@ -137,10 +150,10 @@ static bool probeDeviceIdentity(hid_device *handle,
 				continue;
 		}
 
-		return true;
+		return ProbeResult::Identified;
 	}
 
-	return false;
+	return ProbeResult::NoReply;
 }
 
 bool stillPresent(hid_device *handle, uint16_t pid)
@@ -235,16 +248,76 @@ void HIDMonitor::syncDevices()
 {
 	const uint32_t now = lib_time::get_time_ms();
 
+	const uint32_t interval = _applySerial.empty() ? kScanIntervalMs : kApplyScanIntervalMs;
+
 	if (_lastScanTime != 0 &&
-		(now - _lastScanTime) < kScanIntervalMs)
+		(now - _lastScanTime) < interval)
 	{
 		return;
 	}
 
+	updateApplyState();
 	scanForPid(PID_Sensor);
 	scanForPid(PID_Source);
 	removeDisconnected();
 	_lastScanTime = now;
+}
+
+// hid_enumerate() reads sysfs/udev, so following the device costs nothing on the wire.
+void HIDMonitor::updateApplyState()
+{
+	if (_applySerial.empty())
+		return;
+
+	bool present = false;
+	hid_device_info *list = hid_enumerate(VID, 0x0);
+	for (const hid_device_info *info = list; info && !present; info = info->next)
+		present = (narrowSerial(info->serial_number) == _applySerial);
+	hid_free_enumeration(list);
+
+	if (present && !_applyPresent)
+	{
+		_applyAppearances++;
+		if (_applyAppearances == kBootloaderAppearance)
+			LOG_I("Device %s is in its bootloader applying firmware - leaving it alone",
+				  _applySerial.c_str());
+		else if (_applyAppearances == kApplicationAppearance)
+			LOG_I("Device %s came back as the application after its firmware update",
+				  _applySerial.c_str());
+	}
+	_applyPresent = present;
+}
+
+// True while this device is applying firmware and must not be opened or probed.
+bool HIDMonitor::applySuppressed(const hid_device_info *info) const
+{
+	if (_applySerial.empty() || _applyAppearances >= kApplicationAppearance)
+		return false;
+	return narrowSerial(info->serial_number) == _applySerial;
+}
+
+void HIDMonitor::set_firmware_apply(const std::string &usbSerial)
+{
+#ifdef USE_THREAD_BASED
+	std::lock_guard<std::mutex> lock(_mutex);
+#endif
+	if (usbSerial == _applySerial)
+		return;
+	_applySerial = usbSerial;
+	_applyAppearances = 0;
+	// Still on the bus when the window opens, so seed rather than count it.
+	_applyPresent = !usbSerial.empty();
+}
+
+std::vector<std::string> HIDMonitor::bootloader_serials() const
+{
+#ifdef USE_THREAD_BASED
+	std::lock_guard<std::mutex> lock(_mutex);
+#endif
+	if (_applySerial.empty() || !_applyPresent ||
+		_applyAppearances != kBootloaderAppearance)
+		return {};
+	return {_applySerial};
 }
 
 bool isAlreadyOpen(uint16_t pid, const hid_device_info *info)
@@ -289,6 +362,9 @@ void HIDMonitor::scanForPid(uint16_t pid)
 	{
 		std::string path = info->path;
 
+		if (applySuppressed(info))
+			continue;
+
 		if (isAlreadyOpen(pid, info))
 			continue;
 
@@ -312,13 +388,15 @@ void HIDMonitor::scanForPid(uint16_t pid)
 		hid_set_nonblocking(handle, 1);
 
 		bool success = false;
+		ProbeResult result = ProbeResult::NoReply;
 
 		if (pid == PID_Sensor)
 		{
 			AMFITRACK_HID sensor;
 			sensor._dev_handle = handle;
 
-			if (probeSensorIdentity(sensor))
+			result = probeSensorIdentity(sensor);
+			if (result == ProbeResult::Identified)
 			{
 				AMFITRACK_Devices::getInstance().set(sensor.deviceId, AMFITRACK_Devices::deviceType_t::Sensor, true);
 				AMFITRACK_Devices::getInstance().set_hid(sensor.deviceId, AMFITRACK_Devices::deviceType_t::Sensor, sensor._dev_handle);
@@ -331,7 +409,8 @@ void HIDMonitor::scanForPid(uint16_t pid)
 			AMFITRACK_HID source;
 			source._dev_handle = handle;
 
-			if (probeSourceIdentity(source))
+			result = probeSourceIdentity(source);
+			if (result == ProbeResult::Identified)
 			{
 				AMFITRACK_Devices::getInstance().set(source.deviceId, AMFITRACK_Devices::deviceType_t::Source, true);
 				AMFITRACK_Devices::getInstance().set_hid(source.deviceId, AMFITRACK_Devices::deviceType_t::Source, source._dev_handle);
@@ -339,6 +418,12 @@ void HIDMonitor::scanForPid(uint16_t pid)
 				success = true;
 			}
 		}
+
+		// Only reachable for an update we did not start; never adopt it.
+		if (result == ProbeResult::Bootloader)
+			LOG_W("Device %s answered as a bootloader outside a firmware update - "
+				  "not adopted; power-cycle it",
+				  narrowSerial(info->serial_number).c_str());
 
 		if (!success)
 			hid_close(handle);
@@ -398,7 +483,7 @@ void HIDMonitor::removeDisconnected()
 	}
 }
 
-bool HIDMonitor::probeSensorIdentity(AMFITRACK_HID &sensor)
+ProbeResult HIDMonitor::probeSensorIdentity(AMFITRACK_HID &sensor)
 {
 	uint8_t deviceId = 0;
 	uint32_t uuid[3]{};
@@ -409,18 +494,20 @@ bool HIDMonitor::probeSensorIdentity(AMFITRACK_HID &sensor)
 	auto readFn = [this](hid_device *h, void *d, int t)
 	{ return hidReadTimeout(h, d, t); };
 
-	if (!probeDeviceIdentity(sensor._dev_handle, writeFn, readFn, deviceId, uuid, name, 50))
-		return false;
+	const ProbeResult result =
+		probeDeviceIdentity(sensor._dev_handle, writeFn, readFn, deviceId, uuid, name, 50);
+	if (result != ProbeResult::Identified)
+		return result;
 
 	sensor.deviceId = deviceId;
 	sensor.uuid[0] = uuid[0];
 	sensor.uuid[1] = uuid[1];
 	sensor.uuid[2] = uuid[2];
 	std::snprintf(sensor.name, sizeof(sensor.name), "%s", name);
-	return true;
+	return result;
 }
 
-bool HIDMonitor::probeSourceIdentity(AMFITRACK_HID &source)
+ProbeResult HIDMonitor::probeSourceIdentity(AMFITRACK_HID &source)
 {
 	uint8_t deviceId = 0;
 	uint32_t uuid[3]{};
@@ -431,15 +518,17 @@ bool HIDMonitor::probeSourceIdentity(AMFITRACK_HID &source)
 	auto readFn = [this](hid_device *h, void *d, int t)
 	{ return hidReadTimeout(h, d, t); };
 
-	if (!probeDeviceIdentity(source._dev_handle, writeFn, readFn, deviceId, uuid, name, 50, "Source"))
-		return false;
+	const ProbeResult result = probeDeviceIdentity(source._dev_handle, writeFn, readFn,
+												   deviceId, uuid, name, 50, "Source");
+	if (result != ProbeResult::Identified)
+		return result;
 
 	source.deviceId = deviceId;
 	source.uuid[0] = uuid[0];
 	source.uuid[1] = uuid[1];
 	source.uuid[2] = uuid[2];
 	std::snprintf(source.name, sizeof(source.name), "%s", name);
-	return true;
+	return result;
 }
 
 void HIDMonitor::drainTxQueue()
