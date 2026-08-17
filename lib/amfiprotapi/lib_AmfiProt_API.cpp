@@ -63,6 +63,8 @@ void AmfiProt_API::isRequestAckSet(bool removeFromQueue)
 	if (removeFromQueue)
 	{
 		outgoingBulk_FiFo.pop(amfiFrame);
+		this->isTransmitting = false;
+		this->_retransmitCount = 0;
 		return;
 	}
 
@@ -76,7 +78,9 @@ void AmfiProt_API::isRequestAckSet(bool removeFromQueue)
 	}
 	else
 	{
+		// Set is transmitting to false since theres no ack later here
 		outgoingBulk_FiFo.pop(amfiFrame);
+		this->isTransmitting = false;
 		this->_retransmitCount = 0;
 	}
 }
