@@ -22,10 +22,10 @@
 #include <atomic>
 #include <chrono>
 #include <memory>
-#include <thread>
 #include <utility>
 
 #ifdef USE_THREAD_BASED
+#include <thread>
 #include <mutex>
 #endif
 
