@@ -50,6 +50,29 @@ AmfiProt_API::~AmfiProt_API()
 {
 }
 
+lib_AmfiProt_FrameEvent AmfiProt_API::frame_event(std::atomic<uint32_t> const &slot)
+{
+	const uint32_t packed = slot.load(std::memory_order_acquire);
+
+	return lib_AmfiProt_FrameEvent{static_cast<uint16_t>(packed >> 16),
+								   static_cast<uint8_t>(packed >> 8),
+								   static_cast<uint8_t>(packed)};
+}
+
+void AmfiProt_API::record_frame_event(std::atomic<uint32_t> &slot, uint8_t packetNumber, uint8_t payloadType)
+{
+	uint16_t count = frame_event(slot).count + 1;
+	if (count == 0) // 0 means "nothing recorded yet", so skip it on wrap
+	{
+		count = 1;
+	}
+
+	const uint32_t packed = (static_cast<uint32_t>(count) << 16) |
+							(static_cast<uint32_t>(packetNumber) << 8) |
+							static_cast<uint32_t>(payloadType);
+	slot.store(packed, std::memory_order_release);
+}
+
 void AmfiProt_API::isRequestAckSet(bool removeFromQueue)
 {
 	// To check if its requesting an ack (Can it be done a better way?)
@@ -67,6 +90,9 @@ void AmfiProt_API::isRequestAckSet(bool removeFromQueue)
 		this->_retransmitCount = 0;
 		return;
 	}
+
+	// Reached once the frame has been written, and again for every retransmit.
+	record_frame_event(lastSentFrame[amfiFrame.header.destination], amfiFrame.header.packetNumber, 0);
 
 	uint8_t controlBits = amfiFrame.header.packetType &
 						  lib_AmfiProt_packetType_Mask;
@@ -118,22 +144,32 @@ void AmfiProt_API::clear_isTransmitting(lib_AmfiProt_Frame_t *frame)
 	this->isTransmitting = false;
 }
 
-bool AmfiProt_API::queue_frame(void const *payload, uint8_t length, uint8_t payloadType, lib_AmfiProt_packetType_t packetType, uint8_t destination)
+bool AmfiProt_API::queue_frame(void const *payload, uint8_t length, uint8_t payloadType, lib_AmfiProt_packetType_t packetType, uint8_t destination,
+							   uint8_t *packetNumberInOut, bool reusePacketNumber)
 {
-	static uint8_t packageNumber = 0;
-
 	bool isOk = false;
 	lib_AmfiProt_Frame_t amfiFrame;
 
-	packetNumber[destination] = packageNumber;
-	if (this->lib_AmfiProt_EncodeFrame(&amfiFrame, payload, length, payloadType, packetNumber[destination], destination, packetType))
+	const bool reuse = reusePacketNumber && packetNumberInOut != nullptr;
+	const uint8_t number = reuse ? *packetNumberInOut : _packetNumberCounter.load(std::memory_order_relaxed);
+
+	packetNumber[destination] = number;
+	if (this->lib_AmfiProt_EncodeFrame(&amfiFrame, payload, length, payloadType, number, destination, packetType))
 	{
 		if (!outgoingBulk_FiFo.isFull())
 		{
 			outgoingBulk_FiFo.put(amfiFrame);
 			isOk = true;
-			packageNumber++;
+			if (!reuse)
+			{
+				_packetNumberCounter.fetch_add(1, std::memory_order_relaxed);
+			}
 		}
+	}
+
+	if (isOk && packetNumberInOut != nullptr)
+	{
+		*packetNumberInOut = number;
 	}
 
 	return isOk;
@@ -208,29 +244,29 @@ void AmfiProt_API::libAmfiProt_handle_Ack(void *handle, lib_AmfiProt_Frame_t *fr
 	(void)routing_handle;
 
 	LOG_D("TxUID: %u | Ack", frame->header.source);
+	record_frame_event(lastAckFrame[frame->header.source], frame->header.packetNumber, 0);
 	this->clear_isTransmitting(frame);
 }
 
 void AmfiProt_API::libAmfiProt_handle_ReplySuccess(void *handle, lib_AmfiProt_Frame_t *frame, void *routing_handle)
 {
 	(void)handle;
-	(void)frame;
 	(void)routing_handle;
+	record_frame_event(lastReplyFrame[frame->header.source], frame->header.packetNumber, frame->header.payloadType);
 	LOG_D("TxUID: %u | Success reply", frame->header.source);
 }
 
 void AmfiProt_API::libAmfiProt_handle_ReplyFailure(void *handle, lib_AmfiProt_Frame_t *frame, void *routing_handle)
 {
 	(void)handle;
-	(void)frame;
 	(void)routing_handle;
+	record_frame_event(lastReplyFrame[frame->header.source], frame->header.packetNumber, frame->header.payloadType);
 	LOG_D("TxUID: %u | Failure reply", frame->header.source);
 }
 
 void AmfiProt_API::libAmfiProt_ReplyInvalid(void *handle, lib_AmfiProt_Frame_t *frame, void *routing_handle)
 {
 	(void)handle;
-	(void)frame;
 	(void)routing_handle;
 	LOG_D("TxUID: %u | Invalid reply: %u", frame->header.source, frame->header.payloadType);
 }
@@ -238,16 +274,16 @@ void AmfiProt_API::libAmfiProt_ReplyInvalid(void *handle, lib_AmfiProt_Frame_t *
 void AmfiProt_API::libAmfiProt_handle_ReplyNotImplemented(void *handle, lib_AmfiProt_Frame_t *frame, void *routing_handle)
 {
 	(void)handle;
-	(void)frame;
 	(void)routing_handle;
+	record_frame_event(lastReplyFrame[frame->header.source], frame->header.packetNumber, frame->header.payloadType);
 	LOG_D("TxUID: %u | Not implemented reply: %u", frame->header.source, frame->header.payloadType);
 }
 
 void AmfiProt_API::libAmfiProt_handle_ReplyInvalidRequest(void *handle, lib_AmfiProt_Frame_t *frame, void *routing_handle)
 {
 	(void)handle;
-	(void)frame;
 	(void)routing_handle;
+	record_frame_event(lastReplyFrame[frame->header.source], frame->header.packetNumber, frame->header.payloadType);
 	LOG_D("TxUID: %u | Invalid request: %u", frame->header.source, frame->header.payloadType);
 }
 

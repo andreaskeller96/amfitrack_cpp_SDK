@@ -26,6 +26,7 @@
 #include "lib_AmfiProt_Amfitrack.hpp"
 #include "lib_fifo.hpp"
 
+#include <atomic>
 #include <chrono>
 
 #ifdef USE_THREAD_BASED
@@ -43,6 +44,16 @@
 // Type declarations
 //-----------------------------------------------------------------------------
 
+// What last happened to a frame exchanged with one device. Packed into a single
+// word so a thread other than the one running the protocol can read it without a
+// lock; count makes a repeat of the same packet number a new event.
+struct lib_AmfiProt_FrameEvent
+{
+	uint16_t count;		  // 0: nothing recorded yet
+	uint8_t packetNumber; // the packet this concerns
+	uint8_t payloadType;  // replies only, 0 otherwise
+};
+
 //-----------------------------------------------------------------------------
 // Functions
 //-----------------------------------------------------------------------------
@@ -57,13 +68,27 @@ class AmfiProt_API : public lib_AmfiProt, public lib_AmfiProt_AmfiTrack
 
 	bool isTransmitting;
 
+	// Indexed by TxID: the last frame written to that device, the last transport
+	// ack it sent and the last reply it sent, each carrying the packet number it
+	// concerns. A sender whose frames go NoAck - firmware data does - has no
+	// transport ack to wait on and correlates on these instead.
+	std::atomic<uint32_t> lastSentFrame[256]{};
+	std::atomic<uint32_t> lastAckFrame[256]{};
+	std::atomic<uint32_t> lastReplyFrame[256]{};
+
+	static lib_AmfiProt_FrameEvent frame_event(std::atomic<uint32_t> const &slot);
+
 	lib_fifo<lib_AmfiProt_Frame_t, 50> outgoingBulk_FiFo;
 	lib_fifo<lib_AmfiProt_Frame_t, 50> incomingBulk_FiFo;
 
 	/* Must always run! */
 	void amfiprot_run(void);
 
-	bool queue_frame(void const *payload, uint8_t length, uint8_t payloadType, lib_AmfiProt_packetType_t packetType, uint8_t destination);
+	// packetNumberInOut reports the number the frame was queued with. With
+	// reusePacketNumber it is instead the number to send: a retransmit carrying
+	// the number the device already saw rather than a fresh one.
+	bool queue_frame(void const *payload, uint8_t length, uint8_t payloadType, lib_AmfiProt_packetType_t packetType, uint8_t destination,
+					 uint8_t *packetNumberInOut = nullptr, bool reusePacketNumber = false);
 
 	bool deserialize_frame(void const *pData, uint8_t length);
 
@@ -141,7 +166,12 @@ class AmfiProt_API : public lib_AmfiProt, public lib_AmfiProt_AmfiTrack
 
 	void process_incoming_queue(void);
 
+	static void record_frame_event(std::atomic<uint32_t> &slot, uint8_t packetNumber, uint8_t payloadType);
+
 	uint8_t packetNumber[256];
+
+	// Shared by every destination, and read-modify-written from both producers.
+	std::atomic<uint8_t> _packetNumberCounter{0};
 
 	uint8_t _retransmitCount;
 	bool _lastPackageNumberError;
