@@ -11,6 +11,7 @@
 //-----------------------------------------------------------------------------
 #include "Amfitrack_config.h"
 
+#include "Amfitrack.h"
 #include "Amfitrack_Devices.h"
 #include "Amfitrack_Sensor.h"
 #include "Amfitrack_Source.h"
@@ -292,6 +293,13 @@ void AMFITRACK_Config::run()
 #ifdef USE_THREAD_BASED
 	const std::lock_guard<std::mutex> lock(_mutex);
 #endif
+
+	// Its updater owns the link, and a config reply would look like the device
+	// answering a firmware packet.
+	if (amfitrack_firmware::is_target(_device_id))
+	{
+		return;
+	}
 
 	request_current();
 }

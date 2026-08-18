@@ -56,9 +56,12 @@ class AMFITRACK
 	uint8_t get_sensors_active() const;
 	uint8_t get_sources_active() const;
 
-	// Silence this USB serial until its application re-enumerates (empty
-	// closes): a bootloader that receives any packet stops applying the image.
-	void set_firmware_apply_serial(const std::string &usbSerial);
+	// Hands one device to a firmware updater until its application
+	// re-enumerates: the library stops generating traffic to that TxID and stops
+	// probing that USB serial, so nothing interleaves with the image and no
+	// packet reaches the bootloader (any packet stops it applying the image).
+	// TxID 255 with an empty serial closes the window.
+	void set_firmware_target(uint8_t deviceID, const std::string &usbSerial);
 
 	// Devices in their bootloader; they are in neither the sensor nor source list.
 	std::vector<std::string> get_bootloader_serials() const;
@@ -94,6 +97,12 @@ class AMFITRACK
 
 	static void background_amfitrack_task(AMFITRACK *);
 };
+
+// Consulted by the library's own periodic traffic, which has no AMFITRACK handle.
+namespace amfitrack_firmware
+{
+bool is_target(uint8_t deviceID);
+}
 
 #endif
 /** @} */ // end of module

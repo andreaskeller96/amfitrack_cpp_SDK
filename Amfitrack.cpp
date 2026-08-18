@@ -45,6 +45,8 @@
 static AmfiProt_API *amfiprot_api = nullptr;
 static std::unique_ptr<HIDMonitor> hid_monitor = nullptr;
 static std::atomic<bool> stop_running{false};
+// TxID currently taking a firmware image, -1 when no update is running.
+static std::atomic<int> _firmwareTarget{-1};
 #ifdef USE_THREAD_BASED
 static std::thread background_thread;
 static std::mutex background_thread_mutex;
@@ -198,14 +200,21 @@ uint8_t AMFITRACK::get_sources_active() const
 	return AMFITRACK_Devices::getInstance().get_numer_of_sources();
 }
 
-void AMFITRACK::set_firmware_apply_serial(const std::string &usbSerial)
+void AMFITRACK::set_firmware_target(uint8_t deviceID, const std::string &usbSerial)
 {
+	_firmwareTarget.store(usbSerial.empty() ? -1 : static_cast<int>(deviceID),
+						  std::memory_order_release);
 #if defined(USE_USB)
 	if (hid_monitor)
 		hid_monitor->set_firmware_apply(usbSerial);
 #else
 	(void)usbSerial;
 #endif
+}
+
+bool amfitrack_firmware::is_target(uint8_t deviceID)
+{
+	return _firmwareTarget.load(std::memory_order_acquire) == static_cast<int>(deviceID);
 }
 
 std::vector<std::string> AMFITRACK::get_bootloader_serials() const

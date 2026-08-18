@@ -546,10 +546,14 @@ void HIDMonitor::drainTxQueue()
 	bool sent = false;
 	if (txId == 255)
 	{
+		// A device taking an image is left out: the keepalive broadcast would
+		// interleave with the stream and reach its bootloader.
 		for (uint8_t i = 0; i < AMFITRACK_Devices::getInstance().get_numer_of_sensors(); i++)
 		{
 			AMFITRACK_Sensor s;
 			AMFITRACK_Devices::getInstance().get_sensor_by_number(i, &s);
+			if (amfitrack_firmware::is_target(s.deviceId))
+				continue;
 			if (s._dev_handle && hidWrite(s._dev_handle, txData, dataLen) >= 0)
 				sent = true;
 		}
@@ -557,6 +561,8 @@ void HIDMonitor::drainTxQueue()
 		{
 			AMFITRACK_Source s;
 			AMFITRACK_Devices::getInstance().get_source_by_number(i, &s);
+			if (amfitrack_firmware::is_target(s.deviceId))
+				continue;
 			if (s._dev_handle && hidWrite(s._dev_handle, txData, dataLen) >= 0)
 				sent = true;
 		}

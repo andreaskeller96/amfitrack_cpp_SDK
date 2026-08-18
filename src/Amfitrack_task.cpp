@@ -11,6 +11,7 @@
 //-----------------------------------------------------------------------------
 #include "Amfitrack_task.h"
 
+#include "Amfitrack.h"
 #include "lib_AmfiProt_API.hpp"
 #include "Amfitrack_Devices.h"
 #include "lib_time.h"
@@ -74,6 +75,12 @@ void amfitrack_task::getMissingInfo()
 		// are queried for whatever info is currently missing.
 		for (uint8_t i = 0; i < AMFITRACK_DEVICE_COUNT; i++)
 		{
+			// Its updater owns the link; a version request would interleave.
+			if (amfitrack_firmware::is_target(i))
+			{
+				continue;
+			}
+
 			AMFITRACK_Sensor sensor;
 			AMFITRACK_Devices::getInstance().get_sensor_by_id(i, &sensor);
 			if (sensor.active)
