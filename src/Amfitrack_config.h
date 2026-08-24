@@ -80,6 +80,7 @@ class AMFITRACK_Config
 	bool request_value_by_uid();
 
 	void set_waiting_for_reply(bool waiting);
+	void note_queue_failure();
 	bool select_next_config(DeviceConfig_t const &config);
 	bool is_active(uint8_t device_id, ConfigDiscoveryState_t state) const;
 	void advance_to_value_count(DeviceConfig_t const &config);
@@ -98,4 +99,5 @@ class AMFITRACK_Config
 	bool _force_all_config = false;
 	bool _waiting_for_reply = false;
 	uint32_t _last_request_time = 0;
+	uint32_t _queue_retry_time = 0;
 };

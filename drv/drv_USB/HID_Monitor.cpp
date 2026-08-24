@@ -576,11 +576,27 @@ void HIDMonitor::drainTxQueue()
 		// No route to the device - drop it from the device list
 		LOG_W("TxID %u not reachable, dropping frame and marking device inactive", txId);
 		AMFITRACK_Devices::getInstance().set(txId, AMFITRACK_Devices::deviceType_t::Both, false);
+		_txFailedAttempts = 0;
 		_cb.txDone(true);
+		return;
 	}
 
 	if (sent)
+	{
+		_txFailedAttempts = 0;
 		_cb.txDone(false);
+		return;
+	}
+
+	// Nothing accepted the frame. Without this it stays at the head of the queue
+	// forever: txDone() is what pops it, and the retransmit timeout in
+	// amfiprot_run() only runs once txDone() has marked a transmit ongoing.
+	if (++_txFailedAttempts >= kMaxTxAttempts)
+	{
+		LOG_W("TxID %u write failed %d times, dropping frame", txId, _txFailedAttempts);
+		_txFailedAttempts = 0;
+		_cb.txDone(true);
+	}
 }
 
 void HIDMonitor::drainRx()

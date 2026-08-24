@@ -38,6 +38,8 @@
 
 // Time in ms until transmit is counted as timed out
 static constexpr std::chrono::milliseconds kRetransmitTimeout{1000};
+// A full outgoing queue is reported at most this often, not per dropped frame.
+static constexpr std::chrono::seconds kQueueFullLogInterval{5};
 
 //-----------------------------------------------------------------------------
 // Functions
@@ -163,6 +165,15 @@ bool AmfiProt_API::queue_frame(void const *payload, uint8_t length, uint8_t payl
 			if (!reuse)
 			{
 				_packetNumberCounter.fetch_add(1, std::memory_order_relaxed);
+			}
+		}
+		else
+		{
+			const auto now = std::chrono::steady_clock::now();
+			if ((now - _queueFullLogTime) >= kQueueFullLogInterval)
+			{
+				_queueFullLogTime = now;
+				LOG_W("Outgoing queue full, dropping frame for destination=%u", destination);
 			}
 		}
 	}

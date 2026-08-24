@@ -177,6 +177,7 @@ class AmfiProt_API : public lib_AmfiProt, public lib_AmfiProt_AmfiTrack
 	bool _lastPackageNumberError;
 	// Use chrono for sub-second accuracy instead of time_t
 	std::chrono::steady_clock::time_point _retransmitTimer;
+	std::chrono::steady_clock::time_point _queueFullLogTime;
 };
 
 //-----------------------------------------------------------------------------

@@ -53,6 +53,8 @@ constexpr char kAllConfigCategoryName[] = "All";
 constexpr std::size_t kMaxStoredCategories = std::numeric_limits<uint8_t>::max();
 constexpr std::size_t kMaxStoredConfigs = std::numeric_limits<uint16_t>::max();
 static constexpr uint32_t kConfigReplyTimeoutMs = 1000; // example
+// A full outgoing queue is retried at this rate instead of every run() pass.
+static constexpr uint32_t kQueueRetryBackoffMs = 250;
 
 void copy_payload_name(char *dest, std::size_t dest_size, char const *src, std::size_t src_size)
 {
@@ -627,10 +629,15 @@ bool AMFITRACK_Config::request_current()
 		return false;
 	}
 
+	const uint32_t now = lib_time::get_time_ms();
+
+	if ((_queue_retry_time != 0) && ((now - _queue_retry_time) < kQueueRetryBackoffMs))
+	{
+		return false;
+	}
+
 	if (_waiting_for_reply)
 	{
-		const uint32_t now = lib_time::get_time_ms();
-
 		if ((_last_request_time != 0) &&
 			((now - _last_request_time) < kConfigReplyTimeoutMs))
 		{
@@ -668,6 +675,7 @@ bool AMFITRACK_Config::request_category_count()
 	if (!queued)
 	{
 		LOG_W("request_category_count: failed to queue frame for device_id=%u", _device_id);
+		note_queue_failure();
 	}
 	set_waiting_for_reply(queued);
 	return queued;
@@ -695,6 +703,7 @@ bool AMFITRACK_Config::request_category_name()
 	if (!queued)
 	{
 		LOG_W("request_category_name: failed to queue frame for category_index=%u", _category_index);
+		note_queue_failure();
 	}
 	set_waiting_for_reply(queued);
 	return queued;
@@ -731,6 +740,7 @@ bool AMFITRACK_Config::request_value_count()
 	if (!queued)
 	{
 		LOG_W("request_value_count: failed to queue frame for category=%u", request_category);
+		note_queue_failure();
 	}
 	set_waiting_for_reply(queued);
 	return queued;
@@ -763,6 +773,7 @@ bool AMFITRACK_Config::request_name_by_uid()
 		LOG_W("request_name_by_uid: failed to queue frame for category=%u, index=%u",
 			  request_category,
 			  _config_index);
+		note_queue_failure();
 	}
 	set_waiting_for_reply(queued);
 	return queued;
@@ -792,9 +803,15 @@ bool AMFITRACK_Config::request_value_by_uid()
 	if (!queued)
 	{
 		LOG_W("request_value_by_uid: failed to queue frame for uid=%u", uid);
+		note_queue_failure();
 	}
 	set_waiting_for_reply(queued);
 	return queued;
+}
+
+void AMFITRACK_Config::note_queue_failure()
+{
+	_queue_retry_time = lib_time::get_time_ms();
 }
 
 void AMFITRACK_Config::set_waiting_for_reply(bool waiting)
@@ -803,6 +820,7 @@ void AMFITRACK_Config::set_waiting_for_reply(bool waiting)
 
 	if (waiting)
 	{
+		_queue_retry_time = 0;
 		_last_request_time = lib_time::get_time_ms();
 	}
 	else

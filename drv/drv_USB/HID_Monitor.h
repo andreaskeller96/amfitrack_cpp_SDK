@@ -39,6 +39,9 @@ static constexpr const char *kBootloaderName = "Medability Bootloader";
 // Fast enough that neither reboot of an updating device falls between scans.
 static constexpr uint32_t kApplyScanIntervalMs = 100;
 
+// Drop an unwritable frame after this many passes so the queue keeps draining.
+static constexpr int kMaxTxAttempts = 3;
+
 // An updating device re-enumerates twice: bootloader, then new application.
 static constexpr int kBootloaderAppearance = 1;
 static constexpr int kApplicationAppearance = 2;
@@ -138,6 +141,9 @@ class HIDMonitor
 	std::string _applySerial;    // device being updated; empty = window closed
 	bool _applyPresent = false;  // was it on the bus at the previous scan
 	int _applyAppearances = 0;   // absent->present transitions since it opened
+
+	// A frame nothing can write must not pin the head of the outgoing queue.
+	int _txFailedAttempts = 0;
 
 #ifdef USE_THREAD_BASED
 	mutable std::mutex _mutex;
