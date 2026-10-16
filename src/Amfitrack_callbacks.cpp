@@ -118,9 +118,13 @@ void AmfiProt_API::lib_AmfiProt_Amfitrack_handle_SensorMeasurement(void *handle,
 	imu.Rotation_Z = tempIMU.rotation_z_in_rad_per_sec;
 	AMFITRACK_Devices::getInstance().set(_deviceID, AMFITRACK_Devices::deviceType_t::Sensor, imu);
 
-	lib_AmfiProt_Amfitrack_magneto_t tempMagneto;
-	lib_AmfiProt_Amfitrack_decode_magneto_i16(&SensorMeasurement.magneto_data, &tempMagneto);
-	Magneto_t magneto = { tempMagneto.magneto_X_in_uT, tempMagneto.magneto_Y_in_uT, tempMagneto.magneto_Z_in_uT };
+	// Medability: this device sends raw counts from its external magnetometer, not the protocol's
+	// encoded uT, so the decode is skipped and Magneto_t holds raw counts. The amfitrack service
+	// converts them to uT. Upstream keeps the decode for Amfitrack's generic platform.
+	Magneto_t magneto = {
+		static_cast<float>(SensorMeasurement.magneto_data.magneto_X),
+		static_cast<float>(SensorMeasurement.magneto_data.magneto_Y),
+		static_cast<float>(SensorMeasurement.magneto_data.magneto_Z)};
 	AMFITRACK_Devices::getInstance().set(_deviceID, magneto);
 
 	AMFITRACK_Devices::getInstance().set(_deviceID, SensorMeasurement);
